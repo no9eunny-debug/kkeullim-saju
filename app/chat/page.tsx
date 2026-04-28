@@ -1,8 +1,19 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Sparkles, Send, ArrowLeft, Link2, Check, ChevronRight, UserPlus } from "lucide-react";
+import { Sparkles, Send, ArrowLeft, Link2, Check, ChevronRight, UserPlus, Save, X, User, Users } from "lucide-react";
 import Link from "next/link";
+import { createClient } from "@/lib/supabase/client";
+
+interface SavedProfile {
+  id: string;
+  name: string;
+  mbti: string | null;
+  birth_date: string;
+  birth_time: string | null;
+  gender: string | null;
+  is_me: boolean;
+}
 
 const MBTI_TYPES = [
   "INTJ", "INTP", "ENTJ", "ENTP",
@@ -25,17 +36,41 @@ const CATEGORIES = [
 // 상대방 정보가 필요할 수 있는 카테고리
 const PARTNER_CATEGORIES = ["love", "compatibility", "reunion"];
 
-const LOADING_TIPS = [
+const LOADING_TIPS_GENERAL = [
   "사주에서 일주(日柱)는 '나 자신'을 의미해요",
   "오행이 골고루 있으면 균형 잡힌 성격이에요",
   "MBTI의 I/E는 사주의 음양과 비슷한 개념이에요",
   "재물운은 편재(투자형)와 정재(월급형)로 나뉘어요",
   "궁합은 일주끼리의 관계가 가장 중요해요",
-  "병화(丙火) 일주는 태양처럼 밝고 따뜻한 성격이에요",
-  "AI가 교차 분석하면 더 정확한 결과를 얻을 수 있어요",
   "만세력은 1만 년의 천문 데이터를 담은 달력이에요",
   "사주의 '사'는 네 기둥, '주'는 기둥을 뜻해요",
+  "목(木)이 강한 사람은 봄 에너지로 성장과 도전을 좋아해요",
+  "2026년은 병오(丙午)년, 불의 기운이 강한 해예요",
 ];
+
+const MBTI_TIPS: Record<string, string[]> = {
+  ENTJ: ["ENTJ는 CEO가 가장 많은 MBTI 유형이에요", "ENTJ의 사주에 편관이 있으면 리더십이 더 강해져요", "ENTJ는 화(火) 기운과 잘 맞는 경우가 많아요"],
+  ENTP: ["ENTP는 토론을 즐기는 변호사형, 식신 기운과 닮았어요", "ENTP는 아이디어 뱅크! 사주의 식상과 시너지가 나요", "ENTP 중 사업가 비율이 상위 3위 안에 들어요"],
+  ENFJ: ["ENFJ는 타고난 멘토형, 사주의 정인과 잘 맞아요", "ENFJ는 사람을 끌어당기는 매력이 있어요", "ENFJ는 정관 기운이 강하면 교육자로 빛나요"],
+  ENFP: ["ENFP는 호기심 대왕! 사주의 식신과 궁합이 좋아요", "ENFP는 연애할 때 가장 로맨틱한 MBTI로 꼽혀요", "ENFP의 자유로운 에너지는 목(木) 기운과 닮았어요"],
+  INTJ: ["INTJ는 전략가형, 사주의 편인과 잘 맞아요", "INTJ는 전체 인구의 2%밖에 안 되는 희귀한 유형이에요", "INTJ는 금(金) 기운이 강하면 분석력이 극대화돼요"],
+  INTP: ["INTP는 아인슈타인형! 편인 기운과 시너지 나요", "INTP는 논리적 사고가 뛰어나 사주 분석과 잘 맞아요", "INTP는 혼자 있는 시간이 창의력의 원천이에요"],
+  INFJ: ["INFJ는 가장 희귀한 MBTI 유형이에요 (전체 1%)", "INFJ는 직관이 강해서 사주 해석에도 관심이 많아요", "INFJ의 깊은 통찰력은 사주의 정인과 닮았어요"],
+  INFP: ["INFP는 이상주의자! 사주의 정인과 잘 어울려요", "INFP는 감성이 풍부해서 예술 분야에서 빛나요", "INFP는 수(水) 기운이 강하면 창작 에너지가 폭발해요"],
+  ISTJ: ["ISTJ는 사회의 기둥! 사주의 정관과 찰떡이에요", "ISTJ는 가장 신뢰받는 MBTI 유형으로 꼽혀요", "ISTJ는 토(土) 기운이 강하면 안정감이 극대화돼요"],
+  ISFJ: ["ISFJ는 수호자형, 사주의 정인과 잘 맞아요", "ISFJ는 전체 인구의 13%로 가장 많은 유형 중 하나예요", "ISFJ의 헌신적인 성격은 정재 기운과 닮았어요"],
+  ESTJ: ["ESTJ는 관리자형! 사주의 정관과 시너지가 좋아요", "ESTJ는 조직을 이끄는 능력이 탁월해요", "ESTJ는 금(金) 기운이 강하면 실행력이 더 강해져요"],
+  ESFJ: ["ESFJ는 사교적인 외교관형이에요", "ESFJ는 주변 사람들의 감정을 잘 읽는 능력자예요", "ESFJ의 배려심은 사주의 식신과 닮았어요"],
+  ISTP: ["ISTP는 만능 재주꾼! 편재 기운과 잘 맞아요", "ISTP는 위기 상황에서 가장 침착한 MBTI예요", "ISTP의 실용적인 성격은 금(金) 기운과 닮았어요"],
+  ISFP: ["ISFP는 예술가형! 식신 기운과 궁합이 좋아요", "ISFP는 감각이 뛰어나 미적 분야에서 빛나요", "ISFP는 자유를 사랑하는 목(木) 기운과 닮았어요"],
+  ESTP: ["ESTP는 모험가형! 편관 기운과 시너지 나요", "ESTP는 행동력이 뛰어나 사업에 강해요", "ESTP는 화(火) 기운이 강하면 추진력이 극대화돼요"],
+  ESFP: ["ESFP는 엔터테이너! 식신 기운과 찰떡이에요", "ESFP는 분위기를 띄우는 천재예요", "ESFP는 화(火) 기운과 만나면 인기가 폭발해요"],
+};
+
+function getLoadingTips(mbti: string): string[] {
+  const mbtiTips = MBTI_TIPS[mbti] || [];
+  return [...mbtiTips, ...LOADING_TIPS_GENERAL];
+}
 
 // 후속 질문 추천
 const FOLLOW_UP_SUGGESTIONS: Record<string, string[]> = {
@@ -112,6 +147,15 @@ export default function ChatPage() {
   const [partnerTimeUnknown, setPartnerTimeUnknown] = useState(false);
   const [partnerGender, setPartnerGender] = useState<"male" | "female" | "">("");
 
+  // 유저 세션
+  const [userId, setUserId] = useState<string | null>(null);
+
+  // 저장된 프로필
+  const [savedProfiles, setSavedProfiles] = useState<SavedProfile[]>([]);
+  const [showSaveForm, setShowSaveForm] = useState(false);
+  const [saveName, setSaveName] = useState("");
+  const [saveIsMe, setSaveIsMe] = useState(false);
+
   // 채팅 상태 (리셋되지 않도록 유지)
   const [messages, setMessages] = useState<{ role: string; content: string }[]>([]);
   const [input, setInput] = useState("");
@@ -126,26 +170,121 @@ export default function ChatPage() {
 
   const canProceed = mbti && birthDate && gender;
 
+  // 유저 세션 체크
+  useEffect(() => {
+    const supabase = createClient();
+    supabase.auth.getUser().then(({ data }) => {
+      if (data.user) {
+        setUserId(data.user.id);
+      }
+    });
+  }, []);
+
+  // 저장된 프로필 불러오기
+  useEffect(() => {
+    loadSavedProfiles();
+  }, [userId]);
+
+  const loadSavedProfiles = async () => {
+    const guestId = getGuestId();
+    const params = userId ? `userId=${userId}` : `guestId=${guestId}`;
+    try {
+      const res = await fetch(`/api/profiles?${params}`);
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        setSavedProfiles(data);
+        // "나" 프로필이 있으면 자동으로 정보 채우기
+        const myProfile = data.find((p: SavedProfile) => p.is_me);
+        if (myProfile && !mbti && !birthDate) {
+          setMbti(myProfile.mbti || "");
+          setBirthDate(myProfile.birth_date || "");
+          setBirthTime(myProfile.birth_time || "");
+          setGender((myProfile.gender as "male" | "female") || "");
+          if (myProfile.birth_time === null) setBirthTimeUnknown(true);
+        }
+      }
+    } catch {}
+  };
+
+  const saveProfile = async (name: string, isMe: boolean) => {
+    const guestId = getGuestId();
+    try {
+      await fetch("/api/profiles", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId, guestId, name, isMe,
+          mbti, birthDate, birthTime: birthTimeUnknown ? null : birthTime || null, gender,
+        }),
+      });
+      loadSavedProfiles();
+      setShowSaveForm(false);
+      setSaveName("");
+    } catch {}
+  };
+
+  const savePartnerProfile = async (name: string) => {
+    const guestId = getGuestId();
+    try {
+      await fetch("/api/profiles", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId, guestId, name, isMe: false,
+          mbti: partnerMbti, birthDate: partnerBirthDate,
+          birthTime: partnerTimeUnknown ? null : partnerBirthTime || null,
+          gender: partnerGender,
+        }),
+      });
+      loadSavedProfiles();
+    } catch {}
+  };
+
+  const deleteProfile = async (id: string) => {
+    try {
+      await fetch(`/api/profiles?id=${id}`, { method: "DELETE" });
+      loadSavedProfiles();
+    } catch {}
+  };
+
+  const loadProfile = (profile: SavedProfile) => {
+    setMbti(profile.mbti || "");
+    setBirthDate(profile.birth_date || "");
+    setBirthTime(profile.birth_time || "");
+    setBirthTimeUnknown(!profile.birth_time);
+    setGender((profile.gender as "male" | "female") || "");
+  };
+
+  const loadPartnerProfile = (profile: SavedProfile) => {
+    setPartnerMbti(profile.mbti || "");
+    setPartnerBirthDate(profile.birth_date || "");
+    setPartnerBirthTime(profile.birth_time || "");
+    setPartnerTimeUnknown(!profile.birth_time);
+    setPartnerGender((profile.gender as "male" | "female") || "");
+  };
+
   // 자동 스크롤
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, loading]);
 
-  // 로딩 팁 로테이션
+  // 로딩 팁 로테이션 (MBTI별 팁 포함)
   useEffect(() => {
     if (loading) {
-      setLoadingTip(LOADING_TIPS[Math.floor(Math.random() * LOADING_TIPS.length)]);
+      const tips = getLoadingTips(mbti);
+      setLoadingTip(tips[Math.floor(Math.random() * tips.length)]);
       tipInterval.current = setInterval(() => {
-        setLoadingTip(LOADING_TIPS[Math.floor(Math.random() * LOADING_TIPS.length)]);
-      }, 4000);
+        setLoadingTip(tips[Math.floor(Math.random() * tips.length)]);
+      }, 3500);
     } else {
       if (tipInterval.current) clearInterval(tipInterval.current);
     }
     return () => { if (tipInterval.current) clearInterval(tipInterval.current); };
-  }, [loading]);
+  }, [loading, mbti]);
 
   // 게스트 ID
   const getGuestId = () => {
+    if (typeof window === "undefined") return "";
     let id = localStorage.getItem("guest_id");
     if (!id) { id = crypto.randomUUID(); localStorage.setItem("guest_id", id); }
     return id;
@@ -164,7 +303,8 @@ export default function ChatPage() {
           birthTime: birthTimeUnknown ? null : birthTime || null,
           gender,
           category: cat,
-          guestId: getGuestId(),
+          userId: userId || undefined,
+          guestId: userId ? undefined : getGuestId(),
           ...extraParams,
         }),
       });
@@ -233,7 +373,8 @@ export default function ChatPage() {
           birthTime: birthTimeUnknown ? null : birthTime || null,
           gender, category,
           sessionId, message: userMsg, isFollowUp: true,
-          guestId: getGuestId(),
+          userId: userId || undefined,
+          guestId: userId ? undefined : getGuestId(),
         }),
       });
       const data = await res.json();
@@ -316,6 +457,37 @@ export default function ChatPage() {
               <h1 className="text-2xl font-black mb-2" style={{ color: "#191F28" }}>내 정보 입력</h1>
               <p className="text-sm" style={{ color: "#8B95A1" }}>정확한 분석을 위해 아래 정보를 입력해주세요</p>
             </div>
+
+            {/* 저장된 프로필 목록 */}
+            {savedProfiles.length > 0 && (
+              <div>
+                <label className="text-sm font-bold mb-3 block" style={{ color: "#191F28" }}>저장된 프로필</label>
+                <div className="flex gap-2 overflow-x-auto pb-2">
+                  {savedProfiles.map(profile => (
+                    <button key={profile.id} onClick={() => loadProfile(profile)}
+                      className="shrink-0 flex items-center gap-2 px-4 py-3 rounded-2xl transition-all hover:shadow-md group relative"
+                      style={{ backgroundColor: profile.is_me ? "#EBF4FF" : "#FFFFFF", border: profile.is_me ? "2px solid #3182F6" : "1px solid #E5E8EB" }}>
+                      <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold"
+                        style={{ backgroundColor: profile.is_me ? "#3182F6" : "#F2F4F6", color: profile.is_me ? "#FFFFFF" : "#4E5968" }}>
+                        {profile.is_me ? <User className="w-4 h-4" /> : profile.name.charAt(0)}
+                      </div>
+                      <div className="text-left">
+                        <p className="text-xs font-bold" style={{ color: "#191F28" }}>
+                          {profile.name} {profile.is_me && <span className="text-[10px] font-medium" style={{ color: "#3182F6" }}>나</span>}
+                        </p>
+                        <p className="text-[10px]" style={{ color: "#8B95A1" }}>{profile.mbti || "?"} · {profile.birth_date}</p>
+                      </div>
+                      <button onClick={(e) => { e.stopPropagation(); deleteProfile(profile.id); }}
+                        className="absolute -top-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                        style={{ backgroundColor: "#F04452", color: "#FFFFFF" }}>
+                        <X className="w-3 h-3" />
+                      </button>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* MBTI */}
             <div>
               <label className="text-sm font-bold mb-3 block" style={{ color: "#191F28" }}>MBTI</label>
@@ -360,11 +532,38 @@ export default function ChatPage() {
                 ))}
               </div>
             </div>
-            <button onClick={() => setStep("category")} disabled={!canProceed}
-              className="w-full py-4 rounded-2xl text-base font-bold text-white transition-all hover:scale-[1.01] active:scale-[0.99] disabled:opacity-40"
-              style={{ backgroundColor: "#3182F6" }}>
-              다음
-            </button>
+            {/* 저장 폼 */}
+            {showSaveForm && canProceed && (
+              <div className="p-4 rounded-2xl space-y-3" style={{ backgroundColor: "#FFFFFF", border: "1px solid #E5E8EB" }}>
+                <p className="text-sm font-bold" style={{ color: "#191F28" }}>프로필 저장</p>
+                <input value={saveName} onChange={e => setSaveName(e.target.value)} placeholder="이름 (예: 나, 남자친구, 엄마)"
+                  className="w-full px-4 py-3 rounded-xl text-sm outline-none" style={{ backgroundColor: "#F8FAFB", border: "1px solid #E5E8EB", color: "#191F28" }} />
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" checked={saveIsMe} onChange={e => setSaveIsMe(e.target.checked)} className="w-4 h-4 rounded accent-blue-500" />
+                  <span className="text-sm" style={{ color: "#6B7684" }}>내 프로필로 설정 (다음에 자동 불러오기)</span>
+                </label>
+                <div className="flex gap-2">
+                  <button onClick={() => setShowSaveForm(false)} className="flex-1 py-2.5 rounded-xl text-sm font-bold" style={{ backgroundColor: "#F2F4F6", color: "#4E5968" }}>취소</button>
+                  <button onClick={() => saveName && saveProfile(saveName, saveIsMe)} disabled={!saveName}
+                    className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white disabled:opacity-40" style={{ backgroundColor: "#3182F6" }}>저장</button>
+                </div>
+              </div>
+            )}
+
+            <div className="flex gap-3">
+              {canProceed && !showSaveForm && (
+                <button onClick={() => setShowSaveForm(true)}
+                  className="flex items-center justify-center gap-2 px-5 py-4 rounded-2xl text-sm font-bold transition-all hover:scale-[1.01]"
+                  style={{ backgroundColor: "#F2F4F6", color: "#4E5968" }}>
+                  <Save className="w-4 h-4" /> 저장
+                </button>
+              )}
+              <button onClick={() => setStep("category")} disabled={!canProceed}
+                className="flex-1 py-4 rounded-2xl text-base font-bold text-white transition-all hover:scale-[1.01] active:scale-[0.99] disabled:opacity-40"
+                style={{ backgroundColor: "#3182F6" }}>
+                다음
+              </button>
+            </div>
           </div>
         )}
 
@@ -432,6 +631,25 @@ export default function ChatPage() {
             {(wantPartner || category === "compatibility") && (
               <div className="space-y-5 p-5 rounded-2xl" style={{ backgroundColor: "#FFFFFF", border: "1px solid #E5E8EB" }}>
                 <h3 className="text-sm font-bold" style={{ color: "#191F28" }}>상대방 정보</h3>
+
+                {/* 저장된 프로필에서 불러오기 */}
+                {savedProfiles.filter(p => !p.is_me).length > 0 && (
+                  <div>
+                    <p className="text-xs font-medium mb-2" style={{ color: "#8B95A1" }}>저장된 프로필에서 불러오기</p>
+                    <div className="flex gap-2 overflow-x-auto pb-1">
+                      {savedProfiles.filter(p => !p.is_me).map(profile => (
+                        <button key={profile.id} onClick={() => loadPartnerProfile(profile)}
+                          className="shrink-0 flex items-center gap-2 px-3 py-2 rounded-xl transition-all hover:shadow-sm"
+                          style={{ backgroundColor: "#F8FAFB", border: "1px solid #E5E8EB" }}>
+                          <div className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold" style={{ backgroundColor: "#F2F4F6", color: "#4E5968" }}>
+                            {profile.name.charAt(0)}
+                          </div>
+                          <span className="text-xs font-medium" style={{ color: "#191F28" }}>{profile.name}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
                 {/* Partner MBTI */}
                 <div>
                   <label className="text-xs font-medium mb-2 block" style={{ color: "#6B7684" }}>MBTI (선택)</label>
