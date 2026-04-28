@@ -93,7 +93,9 @@ export async function POST(req: Request) {
 
     // 닉네임이 있으면 시스템 프롬프트에 추가
     if (nickname) {
-      systemPrompt += `\n\n## 사용자 닉네임\n상대방의 닉네임은 "${nickname}"이에요. 답변할 때 "${nickname}"이라고 자연스럽게 불러주세요. 매 문장마다는 아니고, 처음과 중간중간 적절히 불러주면 돼요.`;
+      systemPrompt += `\n\n## 사용자 닉네임 (필수)\n이 사람의 닉네임은 "${nickname}"이에요. 반드시 "${nickname}님"이라고 불러주세요.\n- "이 사람", "이 분" 같은 3인칭 절대 금지. 반드시 "${nickname}님"으로.\n- 첫 문장, 중간 전환, 마무리에서 "${nickname}님"을 사용하세요.\n- 예: "${nickname}님의 사주를 보면요~", "${nickname}님은 진짜~", "정리하면 ${nickname}님의 강점은~"`;
+    } else {
+      systemPrompt += `\n\n## 호칭 규칙 (필수)\n"이 사람", "이 분" 같은 3인칭 표현 절대 금지. 2인칭으로 직접 대화하듯이 말하세요. "사주를 보니까요~", "사주 주인공분은~" 식으로 자연스럽게.`;
     }
 
     let result: string;

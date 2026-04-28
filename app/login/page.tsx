@@ -29,25 +29,52 @@ function LoginForm() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState(urlError ? (ERROR_MESSAGES[urlError] || "로그인 오류가 발생했어요") : "");
+  const [rememberMe, setRememberMe] = useState(false);
 
-  // 이미 로그인 상태면 채팅으로 이동
+  // 이미 로그인 상태면 채팅으로 이동 + 저장된 이메일로 자동 로그인
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
+    const init = async () => {
+      const { data } = await supabase.auth.getSession();
       if (data.session) {
         router.replace("/chat");
+        return;
       }
-    });
+      // 저장된 이메일/비밀번호 불러오기
+      const savedEmail = localStorage.getItem("saju_saved_email");
+      const savedPw = localStorage.getItem("saju_saved_pw");
+      if (savedEmail) {
+        setEmail(savedEmail);
+        setRememberMe(true);
+        if (savedPw) {
+          setPassword(savedPw);
+          // 자동 로그인 시도
+          const { data: loginData, error: loginError } = await supabase.auth.signInWithPassword({
+            email: savedEmail, password: savedPw,
+          });
+          if (!loginError && loginData.session) {
+            window.location.href = "/chat";
+            return;
+          }
+        }
+      }
+    };
+    init();
   }, []);
 
   const siteUrl = typeof window !== "undefined" ? window.location.origin : "";
 
-  const handleKakaoLogin = () => {
-    const params = new URLSearchParams({
-      client_id: process.env.NEXT_PUBLIC_KAKAO_REST_API_KEY || "",
-      redirect_uri: `${siteUrl}/api/auth/kakao/callback`,
-      response_type: "code",
+  const handleKakaoLogin = async () => {
+    setLoading(true);
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "kakao",
+      options: {
+        redirectTo: `${siteUrl}/api/auth/callback`,
+      },
     });
-    window.location.href = `https://kauth.kakao.com/oauth/authorize?${params}`;
+    if (error) {
+      setError("카카오 로그인 연결에 실패했어요. 다시 시도해주세요.");
+      setLoading(false);
+    }
   };
 
   const handleNaverLogin = () => {
@@ -84,7 +111,14 @@ function LoginForm() {
       if (error) {
         setError("이메일 또는 비밀번호가 맞지 않아요");
       } else if (data.session) {
-        // full page navigation으로 세션 쿠키가 서버에 전달되도록 함
+        // 로그인 정보 저장/삭제
+        if (rememberMe) {
+          localStorage.setItem("saju_saved_email", email);
+          localStorage.setItem("saju_saved_pw", password);
+        } else {
+          localStorage.removeItem("saju_saved_email");
+          localStorage.removeItem("saju_saved_pw");
+        }
         window.location.href = "/chat";
         return;
       }
@@ -187,6 +221,14 @@ function LoginForm() {
                   style={{ backgroundColor: "#FFFFFF", border: "1px solid #E5E8EB", color: "#191F28" }}
                   onKeyDown={e => { if (e.key === "Enter" && email && password) handleEmailAuth(); }} />
               </div>
+
+              {!isSignUp && (
+                <label className="flex items-center gap-2 cursor-pointer select-none">
+                  <input type="checkbox" checked={rememberMe} onChange={e => setRememberMe(e.target.checked)}
+                    className="w-4 h-4 rounded accent-[#3182F6]" />
+                  <span className="text-xs" style={{ color: "#8B95A1" }}>아이디/비밀번호 기억하기</span>
+                </label>
+              )}
 
               {error && <p className="text-sm" style={{ color: "#F04452" }}>{error}</p>}
               {message && <p className="text-sm" style={{ color: "#3182F6" }}>{message}</p>}

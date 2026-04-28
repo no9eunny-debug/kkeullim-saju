@@ -82,8 +82,23 @@ export default function MyPage() {
       // 프로필 정보 (plan, usage)
       const profileRes = await fetch(`/api/mypage/profile?userId=${session.user.id}`);
       const profileData = await profileRes.json();
+
+      // 이름 결정: DB name → 카카오 닉네임 → 이메일 앞부분
+      let displayName = profileData.name || session.user.user_metadata?.full_name || null;
+      // 한글/영문/숫자/공백만 남기고 나머지 제거
+      if (displayName) {
+        const cleaned = displayName.replace(/[^\uAC00-\uD7A3a-zA-Z0-9\s]/g, "").trim();
+        if (!cleaned || cleaned.length < 1) {
+          displayName = email.split("@")[0] || "사용자";
+        } else {
+          displayName = cleaned;
+        }
+      } else {
+        displayName = email.split("@")[0] || "사용자";
+      }
+
       setUserProfile({
-        name: profileData.name || session.user.user_metadata?.full_name || null,
+        name: displayName,
         email,
         plan: profileData.plan || "free",
         daily_usage: profileData.daily_usage || 0,
