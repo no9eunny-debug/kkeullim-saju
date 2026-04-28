@@ -25,6 +25,9 @@ function Header() {
           <span className="font-bold text-lg" style={{ color: "#191F28" }}>합리적 미신</span>
         </div>
         <div className="flex items-center gap-3">
+          <button onClick={() => router.push("/daily")} className="hidden sm:inline-flex text-sm font-medium px-4 py-2 rounded-xl transition-colors" style={{ color: "#4E5968" }}>
+            오늘의 운세
+          </button>
           <button onClick={() => router.push("/login")} className="hidden sm:inline-flex text-sm font-medium px-4 py-2 rounded-xl transition-colors" style={{ color: "#4E5968" }}>
             로그인
           </button>
@@ -403,12 +406,11 @@ function Footer() {
           <div className="flex items-center gap-2">
             <Sparkles className="w-5 h-5" style={{ color: "#3182F6" }} />
             <span className="font-bold text-white">합리적 미신</span>
-            <span className="text-xs" style={{ color: "#6B7684" }}></span>
           </div>
           <div className="flex gap-6 text-sm" style={{ color: "#6B7684" }}>
-            <a href="#" className="hover:text-white transition-colors">이용약관</a>
-            <a href="#" className="hover:text-white transition-colors">개인정보처리방침</a>
-            <a href="#" className="hover:text-white transition-colors">문의하기</a>
+            <a href="/terms" className="hover:text-white transition-colors">이용약관</a>
+            <a href="/privacy" className="hover:text-white transition-colors">개인정보처리방침</a>
+            <a href="mailto:kde0130@naver.com" className="hover:text-white transition-colors">문의하기</a>
           </div>
         </div>
         <p className="text-xs mt-6 text-center sm:text-left" style={{ color: "#4E5968" }}>

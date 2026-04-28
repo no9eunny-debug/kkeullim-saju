@@ -27,7 +27,10 @@ export async function GET(req: Request) {
   }
 
   const { data, error } = await query;
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) {
+    console.error("[profiles GET]", error.message);
+    return NextResponse.json({ error: "프로필 목록을 불러오지 못했어요." }, { status: 500 });
+  }
   return NextResponse.json(data || []);
 }
 
@@ -60,7 +63,10 @@ export async function POST(req: Request) {
     is_me: isMe || false,
   }).select().single();
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) {
+    console.error("[profiles POST]", error.message);
+    return NextResponse.json({ error: "프로필 저장에 실패했어요." }, { status: 500 });
+  }
   return NextResponse.json(data);
 }
 
@@ -71,6 +77,9 @@ export async function DELETE(req: Request) {
   if (!id) return NextResponse.json({ error: "id 필요" }, { status: 400 });
 
   const { error } = await supabaseAdmin.from("saved_profiles").delete().eq("id", id);
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) {
+    console.error("[profiles DELETE]", error.message);
+    return NextResponse.json({ error: "프로필 삭제에 실패했어요." }, { status: 500 });
+  }
   return NextResponse.json({ ok: true });
 }

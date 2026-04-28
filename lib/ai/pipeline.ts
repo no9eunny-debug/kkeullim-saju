@@ -65,7 +65,7 @@ export async function runAnalysisPipeline(
   if (results[1].status === "rejected") console.error("[pipeline] Gemini failed:", results[1].reason);
 
   if (!analysisA && !analysisB) {
-    throw new Error("All AI providers failed");
+    throw new Error("AI 분석 서비스에 일시적인 문제가 발생했어요. 잠시 후 다시 시도해주세요.");
   }
 
   // 3. 종합 정리

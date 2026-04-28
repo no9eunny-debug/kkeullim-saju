@@ -1,6 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
 import { createServerClient } from "@supabase/ssr";
-import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 
 const supabaseAdmin = createClient(
@@ -9,10 +8,10 @@ const supabaseAdmin = createClient(
 );
 
 export async function GET(request: NextRequest) {
-  const { searchParams } = new URL(request.url);
-  const origin = process.env.NEXT_PUBLIC_SITE_URL || "https://kkeullim-saju.vercel.app";
-  const code = searchParams.get("code");
-  const kakaoError = searchParams.get("error");
+  const requestUrl = new URL(request.url);
+  const origin = requestUrl.origin;
+  const code = requestUrl.searchParams.get("code");
+  const kakaoError = requestUrl.searchParams.get("error");
 
   if (kakaoError || !code) {
     return NextResponse.redirect(`${origin}/login?error=kakao_cancelled`);
@@ -55,7 +54,7 @@ export async function GET(request: NextRequest) {
     const name = kakaoAccount?.profile?.nickname || "";
 
     // 3. Supabase 사용자 생성 (이미 존재하면 무시)
-    const { data: createData, error: createError } = await supabaseAdmin.auth.admin.createUser({
+    const { error: createError } = await supabaseAdmin.auth.admin.createUser({
       email,
       email_confirm: true,
       user_metadata: { full_name: name, provider: "kakao", kakao_id: String(profileData.id) },
@@ -77,17 +76,19 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(`${origin}/login?error=kakao_session`);
     }
 
-    const cookieStore = await cookies();
+    // 쿠키를 redirect response에 명시적으로 전달하기 위해 수집
+    const cookiesToForward: { name: string; value: string; options: any }[] = [];
+
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       {
         cookies: {
-          getAll() { return cookieStore.getAll(); },
+          getAll() { return request.cookies.getAll(); },
           setAll(cookiesToSet) {
-            cookiesToSet.forEach(({ name, value, options }) =>
-              cookieStore.set(name, value, options)
-            );
+            cookiesToSet.forEach((cookie) => {
+              cookiesToForward.push(cookie);
+            });
           },
         },
       }
@@ -115,7 +116,12 @@ export async function GET(request: NextRequest) {
       await supabaseAdmin.from("profiles").update({ name }).eq("id", userId);
     }
 
-    return NextResponse.redirect(`${origin}/chat`);
+    // redirect response에 세션 쿠키를 명시적으로 설정
+    const response = NextResponse.redirect(`${origin}/chat`);
+    for (const { name: cookieName, value, options } of cookiesToForward) {
+      response.cookies.set(cookieName, value, options);
+    }
+    return response;
   } catch (err) {
     console.error("[Kakao] callback error:", err);
     return NextResponse.redirect(`${origin}/login?error=kakao_unknown`);

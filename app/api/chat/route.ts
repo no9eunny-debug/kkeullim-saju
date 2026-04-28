@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { createClient as createServerSupabase } from "@/lib/supabase/server";
 import { runAnalysisPipeline, handleFollowUp } from "@/lib/ai/pipeline";
+import { getSystemPrompt, type AnalysisDepth } from "@/lib/ai/prompts";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -16,45 +18,10 @@ const DAILY_LIMITS: Record<string, number> = {
 };
 
 // 플랜별 분석 깊이
-function getDepth(plan: string): "summary" | "detailed" | "premium" {
+function getDepth(plan: string): AnalysisDepth {
   if (plan === "premium") return "premium";
   if (plan === "basic") return "detailed";
   return "summary";
-}
-
-// 기본 시스템 프롬프트 (에이전트가 만드는 prompts.ts가 완성되면 교체)
-function getSystemPrompt(category: string, depth: string): string {
-  const depthInstructions = depth === "summary"
-    ? "공감 → 긍정 → 주의점 → 해결 팁 → 다음 질문 유도 순서로. 반드시 1000자 이상 작성하세요."
-    : depth === "detailed"
-    ? "공감 → 긍정적 요소 → 부정적 요소 → 해결 방법 → 유의할 점 순서로 상세하게 분석. 반드시 1200자 이상 작성하세요. 마지막에 다른 궁금한 점을 자연스럽게 유도."
-    : "대운, 세운, 월운까지 포함하여 매우 상세하게 분석. 반드시 1500자 이상. 구체적인 시기와 맞춤 조언 포함.";
-
-  const categoryMap: Record<string, string> = {
-    basic: "기본 사주풀이 (성격, 기질, 강점, 약점)",
-    yearly: "올해 운세 (세운 분석)",
-    love: "연애운 (연애 패턴, 이상형, 연애 시기)",
-    compatibility: "궁합 분석 (두 사람의 사주와 MBTI 궁합)",
-    reunion: "재회운 (헤어진 상대와의 인연 분석)",
-    wealth: "재물운 (재물 흐름, 투자 성향, 재테크 방향)",
-    career: "직업·적성 (적합한 직업군, 커리어 방향)",
-    health: "건강운 (취약한 부분, 건강 관리 방향)",
-  };
-
-  return `당신은 사주와 MBTI를 결합하여 분석하는 전문 상담사입니다.
-
-분석 대상: ${categoryMap[category] || "기본 사주풀이"}
-
-규칙:
-- 한국어 대화체(~요)로 친근하고 따뜻하게
-- 20~40대 여성 대상으로 공감 가는 어조
-- MBTI 특성과 사주 원국을 자연스럽게 연결하여 설명
-- 일주(日柱)를 '나 자신'으로 해석하는 것을 중심으로
-- 오행의 균형/불균형을 성격 및 운세와 연결
-- ${depthInstructions}
-- 이모지는 전체 답변에서 최대 2~3개만 사용. 매 문장에 이모지 넣지 않기
-- 미신이 아닌 자기 이해의 도구로 접근
-- 마지막에 자연스럽게 다른 카테고리(연애운, 재물운 등)를 추천하며 질문 유도`;
 }
 
 export async function POST(req: Request) {
@@ -63,8 +30,20 @@ export async function POST(req: Request) {
     const {
       mbti, birthDate, birthTime, gender, category,
       partnerMbti, partnerBirthDate, partnerBirthTime, partnerGender,
-      userId, guestId, sessionId, message, isFollowUp,
+      userId: clientUserId, guestId, sessionId, message, isFollowUp,
     } = body;
+
+    // 서버 측 세션에서 userId 확인 (클라이언트 전송값보다 우선)
+    let userId = clientUserId || null;
+    try {
+      const supabase = await createServerSupabase();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        userId = user.id;
+      }
+    } catch {
+      // 세션 확인 실패 시 클라이언트 값 사용
+    }
 
     // 사용량 체크
     let plan = "guest";
@@ -93,11 +72,13 @@ export async function POST(req: Request) {
         }
       }
     } else if (guestId) {
-      // 비회원 1회 체크
+      // 비회원 하루 3회 체크
+      const today = new Date().toISOString().slice(0, 10);
       const { count } = await supabaseAdmin
         .from("usage_logs")
         .select("*", { count: "exact", head: true })
-        .eq("guest_id", guestId);
+        .eq("guest_id", guestId)
+        .gte("created_at", `${today}T00:00:00.000Z`);
 
       if ((count || 0) >= 3) {
         return NextResponse.json({

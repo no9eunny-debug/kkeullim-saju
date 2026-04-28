@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Sparkles, Send, ArrowLeft, Link2, Check, ChevronRight, UserPlus, Save, X, User, Users } from "lucide-react";
+import { Sparkles, Send, ArrowLeft, Link2, Check, ChevronRight, UserPlus, Save, X, User } from "lucide-react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import { LOADING_TIPS } from "@/lib/saju/loading-tips";
 
 interface SavedProfile {
   id: string;
@@ -36,18 +37,7 @@ const CATEGORIES = [
 // 상대방 정보가 필요할 수 있는 카테고리
 const PARTNER_CATEGORIES = ["love", "compatibility", "reunion"];
 
-const LOADING_TIPS_GENERAL = [
-  "사주에서 일주(日柱)는 '나 자신'을 의미해요",
-  "오행이 골고루 있으면 균형 잡힌 성격이에요",
-  "MBTI의 I/E는 사주의 음양과 비슷한 개념이에요",
-  "재물운은 편재(투자형)와 정재(월급형)로 나뉘어요",
-  "궁합은 일주끼리의 관계가 가장 중요해요",
-  "만세력은 1만 년의 천문 데이터를 담은 달력이에요",
-  "사주의 '사'는 네 기둥, '주'는 기둥을 뜻해요",
-  "목(木)이 강한 사람은 봄 에너지로 성장과 도전을 좋아해요",
-  "2026년은 병오(丙午)년, 불의 기운이 강한 해예요",
-];
-
+// MBTI별 추가 팁 (LOADING_TIPS와 합쳐서 사용)
 const MBTI_TIPS: Record<string, string[]> = {
   ENTJ: ["ENTJ는 CEO가 가장 많은 MBTI 유형이에요", "ENTJ의 사주에 편관이 있으면 리더십이 더 강해져요", "ENTJ는 화(火) 기운과 잘 맞는 경우가 많아요"],
   ENTP: ["ENTP는 토론을 즐기는 변호사형, 식신 기운과 닮았어요", "ENTP는 아이디어 뱅크! 사주의 식상과 시너지가 나요", "ENTP 중 사업가 비율이 상위 3위 안에 들어요"],
@@ -69,7 +59,7 @@ const MBTI_TIPS: Record<string, string[]> = {
 
 function getLoadingTips(mbti: string): string[] {
   const mbtiTips = MBTI_TIPS[mbti] || [];
-  return [...mbtiTips, ...LOADING_TIPS_GENERAL];
+  return [...mbtiTips, ...LOADING_TIPS];
 }
 
 // 후속 질문 추천
@@ -87,8 +77,17 @@ const FOLLOW_UP_SUGGESTIONS: Record<string, string[]> = {
 type Step = "input" | "category" | "partner-input" | "chatting";
 
 // 메시지 렌더링 (가독성 개선)
+function renderBold(text: string) {
+  const parts = text.split(/(\*\*.*?\*\*)/g);
+  return parts.map((part, j) => {
+    if (part.startsWith("**") && part.endsWith("**")) {
+      return <strong key={j} className="font-bold">{part.slice(2, -2)}</strong>;
+    }
+    return <span key={j}>{part}</span>;
+  });
+}
+
 function MessageContent({ content }: { content: string }) {
-  // 마크다운 볼드, 줄바꿈 처리
   const lines = content.split("\n");
 
   return (
@@ -96,22 +95,16 @@ function MessageContent({ content }: { content: string }) {
       {lines.map((line, i) => {
         if (!line.trim()) return null;
 
-        // **볼드** 처리
-        const parts = line.split(/(\*\*.*?\*\*)/g);
-        const rendered = parts.map((part, j) => {
-          if (part.startsWith("**") && part.endsWith("**")) {
-            return <strong key={j} className="font-bold">{part.slice(2, -2)}</strong>;
-          }
-          return <span key={j}>{part}</span>;
-        });
-
-        // 제목 스타일 (## 또는 ### 으로 시작)
+        // 제목 스타일 (## 또는 ### 으로 시작) — 볼드 처리 전에 체크
         if (line.startsWith("### ")) {
-          return <h4 key={i} className="font-bold text-sm mt-4 mb-1" style={{ color: "#3182F6" }}>{line.replace(/^###\s*/, "")}</h4>;
+          return <h4 key={i} className="font-bold text-sm mt-4 mb-1" style={{ color: "#3182F6" }}>{renderBold(line.replace(/^###\s*/, ""))}</h4>;
         }
         if (line.startsWith("## ")) {
-          return <h3 key={i} className="font-black text-base mt-5 mb-2" style={{ color: "#191F28" }}>{line.replace(/^##\s*/, "")}</h3>;
+          return <h3 key={i} className="font-black text-base mt-5 mb-2" style={{ color: "#191F28" }}>{renderBold(line.replace(/^##\s*/, ""))}</h3>;
         }
+
+        // **볼드** 처리
+        const rendered = renderBold(line);
 
         // 리스트 아이템
         if (line.match(/^[-•]\s/)) {
@@ -326,7 +319,7 @@ export default function ChatPage() {
       setMessages(prev => [...prev, { role: "assistant", content: "네트워크 오류가 발생했어요. 잠시 후 다시 시도해주세요." }]);
     }
     setLoading(false);
-  }, [mbti, birthDate, birthTime, birthTimeUnknown, gender]);
+  }, [mbti, birthDate, birthTime, birthTimeUnknown, gender, userId]);
 
   // 분석 시작
   const handleStartAnalysis = (cat: string) => {

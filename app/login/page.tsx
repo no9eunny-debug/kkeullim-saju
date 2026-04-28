@@ -84,8 +84,8 @@ function LoginForm() {
       if (error) {
         setError("이메일 또는 비밀번호가 맞지 않아요");
       } else if (data.session) {
-        // 세션이 확실히 세팅된 후 이동
-        router.push("/chat");
+        // full page navigation으로 세션 쿠키가 서버에 전달되도록 함
+        window.location.href = "/chat";
         return;
       }
     }

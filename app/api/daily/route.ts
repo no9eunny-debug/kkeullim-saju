@@ -30,7 +30,7 @@ export async function POST(req: Request) {
     const { birthDate, birthTime, gender, mbti } = await req.json();
 
     if (!birthDate) {
-      return NextResponse.json({ error: "생년월일이 필요합니다." }, { status: 400 });
+      return NextResponse.json({ error: "생년월일이 필요해요." }, { status: 400 });
     }
 
     const saju = calculateSaju(birthDate, birthTime || null, gender || "female");
@@ -72,6 +72,6 @@ export async function POST(req: Request) {
     });
   } catch (error) {
     console.error("[daily] error:", error);
-    return NextResponse.json({ error: "오류가 발생했어요." }, { status: 500 });
+    return NextResponse.json({ error: "오늘의 운세를 불러오지 못했어요. 잠시 후 다시 시도해주세요." }, { status: 500 });
   }
 }
