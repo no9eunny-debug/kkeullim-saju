@@ -5,6 +5,7 @@ import Link from "next/link";
 const NAV_ITEMS = [
   { label: "오늘의 운세", href: "/daily" },
   { label: "분석하기", href: "/chat" },
+  { label: "마이페이지", href: "/mypage" },
 ];
 
 export default function Navigation() {

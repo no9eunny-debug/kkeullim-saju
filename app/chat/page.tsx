@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Sparkles, Send, ArrowLeft, Link2, Check, ChevronRight, UserPlus, Save, X, User } from "lucide-react";
+import { Sparkles, Send, ArrowLeft, Link2, Check, ChevronRight, UserPlus, Save, X, User, UserCircle } from "lucide-react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { LOADING_TIPS } from "@/lib/saju/loading-tips";
@@ -130,6 +130,7 @@ export default function ChatPage() {
   const [birthTime, setBirthTime] = useState("");
   const [birthTimeUnknown, setBirthTimeUnknown] = useState(false);
   const [gender, setGender] = useState<"male" | "female" | "">("");
+  const [nickname, setNickname] = useState("");
   const [category, setCategory] = useState("");
 
   // 상대방 정보 (연애운/궁합/재회운)
@@ -301,6 +302,7 @@ export default function ChatPage() {
           birthDate,
           birthTime: birthTimeUnknown ? null : birthTime || null,
           gender,
+          nickname: nickname || undefined,
           category: cat,
           userId: userId || undefined,
           guestId: userId ? undefined : getGuestId(),
@@ -444,6 +446,11 @@ export default function ChatPage() {
                 </button>
               </>
             )}
+            {userId && (
+              <Link href="/mypage" className="p-1.5 rounded-lg transition-all" style={{ backgroundColor: "#F2F4F6" }}>
+                <UserCircle className="w-5 h-5" style={{ color: "#3182F6" }} />
+              </Link>
+            )}
           </div>
         </div>
       </header>
@@ -549,11 +556,39 @@ export default function ChatPage() {
               </div>
             )}
 
+            {/* 닉네임 */}
+            <div>
+              <label className="text-sm font-bold mb-3 block" style={{ color: "#191F28" }}>
+                닉네임 <span className="text-xs font-normal" style={{ color: "#8B95A1" }}>(선택)</span>
+              </label>
+              <input type="text" value={nickname} onChange={e => setNickname(e.target.value)}
+                placeholder="분석 결과에서 불릴 이름 (예: 동은님, 블카님)"
+                maxLength={10}
+                className="w-full px-4 py-3.5 rounded-xl text-sm outline-none"
+                style={{ backgroundColor: "#FFFFFF", border: "1px solid #E5E8EB", color: "#191F28" }} />
+              <p className="text-xs mt-2" style={{ color: "#8B95A1" }}>입력하면 AI가 닉네임으로 친근하게 불러줘요</p>
+            </div>
+
+            {/* 프로필 저장 안내 배너 */}
+            {canProceed && !showSaveForm && savedProfiles.length === 0 && (
+              <button onClick={() => setShowSaveForm(true)}
+                className="w-full flex items-center gap-3 p-4 rounded-2xl text-left transition-all hover:shadow-md"
+                style={{ backgroundColor: "#EBF4FF", border: "2px dashed #3182F6" }}>
+                <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: "#3182F6" }}>
+                  <Save className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <p className="text-sm font-bold" style={{ color: "#191F28" }}>내 정보 저장하기</p>
+                  <p className="text-xs mt-0.5" style={{ color: "#6B7684" }}>저장하면 다음에 바로 불러올 수 있어요</p>
+                </div>
+              </button>
+            )}
+
             <div className="flex gap-3">
-              {canProceed && !showSaveForm && (
+              {canProceed && !showSaveForm && savedProfiles.length > 0 && (
                 <button onClick={() => setShowSaveForm(true)}
                   className="flex items-center justify-center gap-2 px-5 py-4 rounded-2xl text-sm font-bold transition-all hover:scale-[1.01]"
-                  style={{ backgroundColor: "#F2F4F6", color: "#4E5968" }}>
+                  style={{ backgroundColor: "#EBF4FF", color: "#3182F6", border: "1px solid #3182F6" }}>
                   <Save className="w-4 h-4" /> 저장
                 </button>
               )}

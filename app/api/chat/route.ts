@@ -28,7 +28,7 @@ export async function POST(req: Request) {
   try {
     const body = await req.json();
     const {
-      mbti, birthDate, birthTime, gender, category,
+      mbti, birthDate, birthTime, gender, category, nickname,
       partnerMbti, partnerBirthDate, partnerBirthTime, partnerGender,
       userId: clientUserId, guestId, sessionId, message, isFollowUp,
     } = body;
@@ -89,7 +89,12 @@ export async function POST(req: Request) {
     }
 
     const depth = getDepth(plan);
-    const systemPrompt = getSystemPrompt(category, depth);
+    let systemPrompt = getSystemPrompt(category, depth);
+
+    // 닉네임이 있으면 시스템 프롬프트에 추가
+    if (nickname) {
+      systemPrompt += `\n\n## 사용자 닉네임\n상대방의 닉네임은 "${nickname}"이에요. 답변할 때 "${nickname}"이라고 자연스럽게 불러주세요. 매 문장마다는 아니고, 처음과 중간중간 적절히 불러주면 돼요.`;
+    }
 
     let result: string;
 
