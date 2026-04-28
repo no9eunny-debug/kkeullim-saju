@@ -3,7 +3,8 @@
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { Sparkles, Star, ChevronDown, Check, ArrowRight, Heart, Briefcase, Coins, Shield } from "lucide-react";
+import { Sparkles, Star, ChevronDown, Check, ArrowRight, Heart, Briefcase, Coins, Shield, UserCircle } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
 
 const fadeUp = {
   hidden: { opacity: 0, y: 24 },
@@ -17,6 +18,19 @@ const fadeUp = {
 /* ─────────── Header ─────────── */
 function Header() {
   const router = useRouter();
+  const [loggedIn, setLoggedIn] = useState(false);
+
+  useEffect(() => {
+    const supabase = createClient();
+    supabase.auth.getSession().then(({ data }) => {
+      if (data.session?.user) setLoggedIn(true);
+    });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setLoggedIn(!!session?.user);
+    });
+    return () => subscription.unsubscribe();
+  }, []);
+
   return (
     <header className="fixed top-0 left-0 right-0 z-50 backdrop-blur-lg" style={{ backgroundColor: "rgba(255,255,255,0.85)", borderBottom: "1px solid #E5E8EB" }}>
       <div className="mx-auto max-w-5xl flex items-center justify-between px-5 py-4">
@@ -28,9 +42,16 @@ function Header() {
           <button onClick={() => router.push("/daily")} className="hidden sm:inline-flex text-sm font-medium px-4 py-2 rounded-xl transition-colors" style={{ color: "#4E5968" }}>
             오늘의 운세
           </button>
-          <button onClick={() => router.push("/login")} className="hidden sm:inline-flex text-sm font-medium px-4 py-2 rounded-xl transition-colors" style={{ color: "#4E5968" }}>
-            로그인
-          </button>
+          {loggedIn ? (
+            <button onClick={() => router.push("/mypage")} className="hidden sm:inline-flex items-center gap-1.5 text-sm font-medium px-4 py-2 rounded-xl transition-colors" style={{ color: "#3182F6" }}>
+              <UserCircle className="w-4 h-4" />
+              마이페이지
+            </button>
+          ) : (
+            <button onClick={() => router.push("/login")} className="hidden sm:inline-flex text-sm font-medium px-4 py-2 rounded-xl transition-colors" style={{ color: "#4E5968" }}>
+              로그인
+            </button>
+          )}
           <button onClick={() => router.push("/chat")} className="text-sm font-bold px-5 py-2.5 rounded-xl text-white transition-all hover:scale-[1.02]" style={{ backgroundColor: "#3182F6" }}>
             시작하기
           </button>
