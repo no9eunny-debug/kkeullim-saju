@@ -81,8 +81,10 @@ export async function runAnalysisPipeline(
     finalResult = await analyzeWithGPT(systemPrompt, userMessage, conversationHistory);
   } catch (err: any) {
     console.error("[pipeline] GPT-4o failed:", err);
-    const detail = err?.message || err?.status || String(err);
-    throw new Error(`GPT 오류: ${detail}`);
+    if (err?.status === 429 || err?.message?.includes("quota")) {
+      throw new Error("AI 분석 크레딧이 소진되었어요. 관리자에게 문의해주세요.");
+    }
+    throw new Error("AI 분석 서비스에 일시적인 문제가 발생했어요. 잠시 후 다시 시도해주세요.");
   }
 
   if (!finalResult) {

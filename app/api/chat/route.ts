@@ -188,10 +188,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ result, sessionId });
   } catch (error: any) {
     console.error("[chat] error:", error);
-    const debugMsg = error?.message || String(error);
-    return NextResponse.json(
-      { error: "분석 중 오류가 발생했어요. 잠시 후 다시 시도해주세요.", debug: debugMsg },
-      { status: 500 }
-    );
+    const msg = error?.message || "분석 중 오류가 발생했어요. 잠시 후 다시 시도해주세요.";
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 }
