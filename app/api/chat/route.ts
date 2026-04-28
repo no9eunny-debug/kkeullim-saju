@@ -25,10 +25,10 @@ function getDepth(plan: string): "summary" | "detailed" | "premium" {
 // 기본 시스템 프롬프트 (에이전트가 만드는 prompts.ts가 완성되면 교체)
 function getSystemPrompt(category: string, depth: string): string {
   const depthInstructions = depth === "summary"
-    ? "핵심만 3~5문장으로 간결하게 요약해주세요."
+    ? "공감 → 긍정 → 주의점 → 해결 팁 → 다음 질문 유도 순서로. 반드시 1000자 이상 작성하세요."
     : depth === "detailed"
-    ? "공감 → 긍정적 요소 → 부정적 요소 → 해결 방법 → 유의할 점 순서로 상세하게 분석해주세요. 마지막에 다른 궁금한 점을 자연스럽게 유도해주세요."
-    : "대운, 세운, 월운까지 포함하여 매우 상세하게 분석해주세요. 구체적인 시기와 맞춤 조언을 포함해주세요.";
+    ? "공감 → 긍정적 요소 → 부정적 요소 → 해결 방법 → 유의할 점 순서로 상세하게 분석. 반드시 1200자 이상 작성하세요. 마지막에 다른 궁금한 점을 자연스럽게 유도."
+    : "대운, 세운, 월운까지 포함하여 매우 상세하게 분석. 반드시 1500자 이상. 구체적인 시기와 맞춤 조언 포함.";
 
   const categoryMap: Record<string, string> = {
     basic: "기본 사주풀이 (성격, 기질, 강점, 약점)",
