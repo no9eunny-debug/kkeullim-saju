@@ -63,18 +63,16 @@ function LoginForm() {
 
   const siteUrl = typeof window !== "undefined" ? window.location.origin : "";
 
-  const handleKakaoLogin = async () => {
+  const handleKakaoLogin = () => {
     setLoading(true);
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: "kakao",
-      options: {
-        redirectTo: `${siteUrl}/api/auth/callback`,
-      },
-    });
-    if (error) {
-      setError("카카오 로그인 연결에 실패했어요. 다시 시도해주세요.");
+    const clientId = process.env.NEXT_PUBLIC_KAKAO_REST_API_KEY;
+    if (!clientId) {
+      setError("카카오 로그인 설정이 되어있지 않아요.");
       setLoading(false);
+      return;
     }
+    const redirectUri = `${siteUrl}/api/auth/kakao/callback`;
+    window.location.href = `https://kauth.kakao.com/oauth/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code`;
   };
 
   const handleNaverLogin = () => {

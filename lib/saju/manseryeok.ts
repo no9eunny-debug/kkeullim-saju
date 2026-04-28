@@ -190,8 +190,149 @@ export function calculateSaju(
   };
 }
 
-// 사주 데이터를 AI 프롬프트용 텍스트로 변환
+// ---------------------------------------------------------------------------
+// 십성 (Ten Gods) 계산
+// ---------------------------------------------------------------------------
+const SIPSUNG_TABLE: Record<string, Record<string, string>> = {
+  // 일간 기준으로 다른 천간/지지의 오행과 음양 관계로 십성 결정
+  // key: 일간, value: { 대상천간: 십성 }
+};
+
+// 오행 상생상극 관계로 십성 계산
+function calcSipsung(dayGan: string, targetChar: string): string {
+  const dayOhang = OHANG_GAN[dayGan] || OHANG_JI[dayGan] || "";
+  const targetOhang = getOhang(targetChar);
+  const dayEumyang = EUMYANG_GAN[dayGan] || "";
+  const targetEumyang = getEumyang(targetChar);
+  if (!dayOhang || !targetOhang) return "";
+
+  const sameYang = dayEumyang === targetEumyang;
+
+  // 비견/겁재: 같은 오행
+  if (dayOhang === targetOhang) return sameYang ? "비견" : "겁재";
+  // 식신/상관: 내가 생하는 오행
+  const generates: Record<string, string> = { 목: "화", 화: "토", 토: "금", 금: "수", 수: "목" };
+  if (generates[dayOhang] === targetOhang) return sameYang ? "식신" : "상관";
+  // 편재/정재: 내가 극하는 오행
+  const controls: Record<string, string> = { 목: "토", 화: "금", 토: "수", 금: "목", 수: "화" };
+  if (controls[dayOhang] === targetOhang) return sameYang ? "편재" : "정재";
+  // 편관/정관: 나를 극하는 오행
+  if (controls[targetOhang] === dayOhang) return sameYang ? "편관" : "정관";
+  // 편인/정인: 나를 생하는 오행
+  if (generates[targetOhang] === dayOhang) return sameYang ? "편인" : "정인";
+
+  return "";
+}
+
+// 십성 한글 풀이
+const SIPSUNG_DESC: Record<string, string> = {
+  비견: "나와 같은 기운, 경쟁·독립심",
+  겁재: "나와 비슷하지만 경쟁적인 기운",
+  식신: "표현력·창의력·먹을복의 별",
+  상관: "자유·반항·재능의 별",
+  편재: "사업감각·돈복·활동력의 별",
+  정재: "안정적인 재물·성실한 돈 관리",
+  편관: "카리스마·권위·도전의 별",
+  정관: "안정·책임감·질서의 별",
+  편인: "직관·영감·비범한 사고의 별",
+  정인: "학문·지혜·어머니의 별",
+};
+
+// ---------------------------------------------------------------------------
+// 신살 (Special Stars) 계산
+// ---------------------------------------------------------------------------
+function calcShinsal(saju: SajuResult): string[] {
+  const results: string[] = [];
+  const yearJi = saju.yearPillar.ji;
+  const dayJi = saju.dayPillar.ji;
+  const allJi = [saju.yearPillar.ji, saju.monthPillar.ji, saju.dayPillar.ji];
+  if (saju.timePillar) allJi.push(saju.timePillar.ji);
+
+  // 도화살 (연지 기준)
+  const doHwaMap: Record<string, string> = { 인: "묘", 오: "묘", 술: "묘", 신: "유", 자: "유", 진: "유", 사: "오", 유: "오", 축: "오", 해: "자", 묘: "자", 미: "자" };
+  const doHwa = doHwaMap[yearJi];
+  if (doHwa && allJi.includes(doHwa)) results.push("도화살(매력·인기의 살)");
+
+  // 역마살 (연지 기준)
+  const yeokMaMap: Record<string, string> = { 인: "신", 오: "신", 술: "신", 신: "인", 자: "인", 진: "인", 사: "해", 유: "해", 축: "해", 해: "사", 묘: "사", 미: "사" };
+  const yeokMa = yeokMaMap[yearJi];
+  if (yeokMa && allJi.includes(yeokMa)) results.push("역마살(이동·변화가 많은 살)");
+
+  // 화개살 (연지 기준)
+  const hwaGaeMap: Record<string, string> = { 인: "술", 오: "술", 술: "술", 신: "진", 자: "진", 진: "진", 사: "축", 유: "축", 축: "축", 해: "미", 묘: "미", 미: "미" };
+  const hwaGae = hwaGaeMap[yearJi];
+  if (hwaGae && allJi.includes(hwaGae)) results.push("화개살(예술·종교·학문의 살)");
+
+  // 홍염살 (일간 기준)
+  const hongYeomMap: Record<string, string> = { 갑: "오", 을: "사", 병: "인", 정: "미", 무: "진", 기: "진", 경: "술", 신: "유", 임: "자", 계: "신" };
+  const dayGan = saju.dayPillar.gan;
+  const hongYeom = hongYeomMap[dayGan];
+  if (hongYeom && allJi.includes(hongYeom)) results.push("홍염살(강한 매력·이성운의 살)");
+
+  return results;
+}
+
+// ---------------------------------------------------------------------------
+// 합/충 관계 계산
+// ---------------------------------------------------------------------------
+function calcRelations(saju: SajuResult): string[] {
+  const results: string[] = [];
+  const pillars = [
+    { name: "연지", ji: saju.yearPillar.ji },
+    { name: "월지", ji: saju.monthPillar.ji },
+    { name: "일지", ji: saju.dayPillar.ji },
+  ];
+  if (saju.timePillar) pillars.push({ name: "시지", ji: saju.timePillar.ji });
+
+  // 육합
+  const yukHap: [string, string, string][] = [
+    ["자", "축", "토"], ["인", "해", "목"], ["묘", "술", "화"],
+    ["진", "유", "금"], ["사", "신", "수"], ["오", "미", "화"],
+  ];
+  // 삼합
+  const samHap: [string, string, string, string][] = [
+    ["인", "오", "술", "화"], ["신", "자", "진", "수"],
+    ["사", "유", "축", "금"], ["해", "묘", "미", "목"],
+  ];
+  // 충
+  const chung: [string, string][] = [
+    ["자", "오"], ["축", "미"], ["인", "신"], ["묘", "유"], ["진", "술"], ["사", "해"],
+  ];
+
+  for (let i = 0; i < pillars.length; i++) {
+    for (let j = i + 1; j < pillars.length; j++) {
+      const a = pillars[i], b = pillars[j];
+      // 육합 체크
+      for (const [x, y, ohang] of yukHap) {
+        if ((a.ji === x && b.ji === y) || (a.ji === y && b.ji === x)) {
+          results.push(`${a.name}-${b.name} 육합(${ohang}, 조화로운 결합)`);
+        }
+      }
+      // 충 체크
+      for (const [x, y] of chung) {
+        if ((a.ji === x && b.ji === y) || (a.ji === y && b.ji === x)) {
+          results.push(`${a.name}-${b.name} 충(갈등·변화의 에너지)`);
+        }
+      }
+    }
+  }
+
+  // 삼합 체크
+  const jiList = pillars.map(p => p.ji);
+  for (const [a, b, c, ohang] of samHap) {
+    const count = [a, b, c].filter(x => jiList.includes(x)).length;
+    if (count >= 2) {
+      results.push(`삼합(${ohang}) - ${[a, b, c].filter(x => jiList.includes(x)).join("·")}이 모여 ${ohang}의 기운 강화`);
+    }
+  }
+
+  return results;
+}
+
+// 사주 데이터를 AI 프롬프트용 텍스트로 변환 (강화 버전)
 export function sajuToPromptText(saju: SajuResult, mbti: string): string {
+  const dayGan = saju.dayPillar.gan;
+
   const lines = [
     `[사주 원국 정보]`,
     `MBTI: ${mbti}`,
@@ -200,7 +341,7 @@ export function sajuToPromptText(saju: SajuResult, mbti: string): string {
     ``,
     `연주: ${saju.yearPillar.gan}${saju.yearPillar.ji} (${getOhang(saju.yearPillar.gan)}/${getOhang(saju.yearPillar.ji)})`,
     `월주: ${saju.monthPillar.gan}${saju.monthPillar.ji} (${getOhang(saju.monthPillar.gan)}/${getOhang(saju.monthPillar.ji)})`,
-    `일주: ${saju.dayPillar.gan}${saju.dayPillar.ji} (${getOhang(saju.dayPillar.gan)}/${getOhang(saju.dayPillar.ji)}) ← 나 자신`,
+    `일주: ${saju.dayPillar.gan}${saju.dayPillar.ji} (${getOhang(saju.dayPillar.gan)}/${getOhang(saju.dayPillar.ji)}) ← 나 자신 (일간: ${dayGan}, ${getOhang(dayGan)}${getEumyang(dayGan)})`,
   ];
   if (saju.timePillar) {
     lines.push(`시주: ${saju.timePillar.gan}${saju.timePillar.ji} (${getOhang(saju.timePillar.gan)}/${getOhang(saju.timePillar.ji)})`);
@@ -210,5 +351,67 @@ export function sajuToPromptText(saju: SajuResult, mbti: string): string {
     `띠: ${saju.tti}띠`,
     `오행 분포: 목${saju.ohangDistribution.목} 화${saju.ohangDistribution.화} 토${saju.ohangDistribution.토} 금${saju.ohangDistribution.금} 수${saju.ohangDistribution.수}`,
   );
+
+  // 오행 과다/부족 분석
+  const totalElements = Object.values(saju.ohangDistribution).reduce((a, b) => a + b, 0);
+  const excess = Object.entries(saju.ohangDistribution).filter(([, v]) => v >= 3).map(([k]) => k);
+  const lacking = Object.entries(saju.ohangDistribution).filter(([, v]) => v === 0).map(([k]) => k);
+  if (excess.length) lines.push(`오행 과다: ${excess.join(", ")} (기운이 넘침)`);
+  if (lacking.length) lines.push(`오행 부족: ${lacking.join(", ")} (보완 필요)`);
+
+  // 십성 분석
+  lines.push(``, `[십성 분석 (일간 ${dayGan} 기준)]`);
+  const allChars = [
+    { label: "연간", char: saju.yearPillar.gan },
+    { label: "연지", char: saju.yearPillar.ji },
+    { label: "월간", char: saju.monthPillar.gan },
+    { label: "월지", char: saju.monthPillar.ji },
+    { label: "일지", char: saju.dayPillar.ji },
+  ];
+  if (saju.timePillar) {
+    allChars.push({ label: "시간", char: saju.timePillar.gan });
+    allChars.push({ label: "시지", char: saju.timePillar.ji });
+  }
+  const sipsungCount: Record<string, number> = {};
+  for (const { label, char } of allChars) {
+    const ss = calcSipsung(dayGan, char);
+    if (ss) {
+      lines.push(`${label}(${char}): ${ss} - ${SIPSUNG_DESC[ss] || ""}`);
+      sipsungCount[ss] = (sipsungCount[ss] || 0) + 1;
+    }
+  }
+
+  // 십성 요약
+  const dominant = Object.entries(sipsungCount).sort((a, b) => b[1] - a[1]);
+  if (dominant.length) {
+    lines.push(`주요 십성: ${dominant.slice(0, 3).map(([k, v]) => `${k}(${v}개)`).join(", ")}`);
+  }
+
+  // 용신 추정 (부족한 오행 = 용신)
+  if (lacking.length) {
+    lines.push(``, `[용신 추정]`);
+    lines.push(`부족한 ${lacking.join("/")} 오행이 도움이 되는 기운(용신)일 가능성 높음`);
+  } else if (excess.length) {
+    // 과다한 오행을 억제하는 오행이 용신
+    const controlMap: Record<string, string> = { 목: "금", 화: "수", 토: "목", 금: "화", 수: "토" };
+    const yongshin = excess.map(e => controlMap[e]).filter(Boolean);
+    lines.push(``, `[용신 추정]`);
+    lines.push(`과다한 ${excess.join("/")}을 조절하는 ${[...new Set(yongshin)].join("/")} 기운이 도움될 가능성`);
+  }
+
+  // 신살
+  const shinsal = calcShinsal(saju);
+  if (shinsal.length) {
+    lines.push(``, `[신살]`);
+    shinsal.forEach(s => lines.push(`- ${s}`));
+  }
+
+  // 합/충 관계
+  const relations = calcRelations(saju);
+  if (relations.length) {
+    lines.push(``, `[합/충 관계]`);
+    relations.forEach(r => lines.push(`- ${r}`));
+  }
+
   return lines.join("\n");
 }
