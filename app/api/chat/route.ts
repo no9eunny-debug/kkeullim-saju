@@ -9,8 +9,8 @@ const supabaseAdmin = createClient(
 
 // 플랜별 일일 한도
 const DAILY_LIMITS: Record<string, number> = {
-  guest: 1,
-  free: 5,
+  guest: 3,
+  free: 7,
   basic: 20,
   premium: 999999,
 };
@@ -99,10 +99,10 @@ export async function POST(req: Request) {
         .select("*", { count: "exact", head: true })
         .eq("guest_id", guestId);
 
-      if ((count || 0) >= 1) {
+      if ((count || 0) >= 3) {
         return NextResponse.json({
           error: "guest_limit",
-          message: "비회원은 1회만 체험 가능해요. 로그인하면 하루 5회까지 무료!",
+          message: "비회원은 하루 3회까지 체험 가능해요. 로그인하면 하루 7회까지 무료!",
         }, { status: 429 });
       }
     }

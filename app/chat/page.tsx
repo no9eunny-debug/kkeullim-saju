@@ -231,15 +231,15 @@ export default function ChatPage() {
             {/* Birth Date */}
             <div>
               <label className="text-sm font-bold mb-3 block" style={{ color: "#191F28" }}>생년월일</label>
-              <input type="date" value={birthDate} onChange={e => setBirthDate(e.target.value)} className="w-full px-4 py-3.5 rounded-xl text-sm"
-                style={{ backgroundColor: "#FFFFFF", border: "1px solid #E5E8EB", color: "#191F28" }} />
+              <input type="date" value={birthDate} onChange={e => setBirthDate(e.target.value)} placeholder="1995-03-15" className="w-full px-4 py-3.5 rounded-xl text-sm"
+                style={{ backgroundColor: "#FFFFFF", border: "1px solid #E5E8EB", color: birthDate ? "#191F28" : "#8B95A1" }} />
             </div>
             {/* Birth Time */}
             <div>
               <label className="text-sm font-bold mb-3 block" style={{ color: "#191F28" }}>태어난 시간</label>
               <div className="flex items-center gap-3">
-                <input type="time" value={birthTime} onChange={e => setBirthTime(e.target.value)} disabled={birthTimeUnknown}
-                  className="flex-1 px-4 py-3.5 rounded-xl text-sm disabled:opacity-40" style={{ backgroundColor: "#FFFFFF", border: "1px solid #E5E8EB", color: "#191F28" }} />
+                <input type="time" value={birthTime} onChange={e => setBirthTime(e.target.value)} disabled={birthTimeUnknown} placeholder="오전 11:00"
+                  className="flex-1 px-4 py-3.5 rounded-xl text-sm disabled:opacity-40" style={{ backgroundColor: "#FFFFFF", border: "1px solid #E5E8EB", color: birthTime ? "#191F28" : "#8B95A1" }} />
                 <label className="flex items-center gap-2 cursor-pointer shrink-0">
                   <input type="checkbox" checked={birthTimeUnknown} onChange={e => { setBirthTimeUnknown(e.target.checked); if (e.target.checked) setBirthTime(""); }} className="w-4 h-4 rounded accent-blue-500" />
                   <span className="text-sm" style={{ color: "#6B7684" }}>모름</span>
