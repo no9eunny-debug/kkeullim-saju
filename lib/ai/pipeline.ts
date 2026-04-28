@@ -79,9 +79,10 @@ export async function runAnalysisPipeline(
   let finalResult: string;
   try {
     finalResult = await analyzeWithGPT(systemPrompt, userMessage, conversationHistory);
-  } catch (err) {
+  } catch (err: any) {
     console.error("[pipeline] GPT-4o failed:", err);
-    throw new Error("AI 분석 서비스에 일시적인 문제가 발생했어요. 잠시 후 다시 시도해주세요.");
+    const detail = err?.message || err?.status || String(err);
+    throw new Error(`GPT 오류: ${detail}`);
   }
 
   if (!finalResult) {
