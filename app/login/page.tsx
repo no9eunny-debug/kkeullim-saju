@@ -1,24 +1,51 @@
 "use client";
 
+import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { Sparkles } from "lucide-react";
+import { Sparkles, Mail, ArrowLeft } from "lucide-react";
 
 export default function LoginPage() {
   const supabase = createClient();
+  const [mode, setMode] = useState<"main" | "email">("main");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [isSignUp, setIsSignUp] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
 
-  const handleSocialLogin = async (provider: "kakao" | "naver") => {
-    // Custom provider for Naver (OIDC), native for Kakao
-    if (provider === "naver") {
-      await supabase.auth.signInWithOAuth({
-        provider: "naver" as any,
-        options: { redirectTo: `${window.location.origin}/api/auth/callback` },
+  const handleKakaoLogin = async () => {
+    await supabase.auth.signInWithOAuth({
+      provider: "kakao",
+      options: { redirectTo: `${window.location.origin}/api/auth/callback` },
+    });
+  };
+
+  const handleEmailAuth = async () => {
+    setLoading(true);
+    setError("");
+    setMessage("");
+
+    if (isSignUp) {
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: { emailRedirectTo: `${window.location.origin}/api/auth/callback` },
       });
+      if (error) {
+        setError(error.message === "User already registered" ? "이미 가입된 이메일이에요" : error.message);
+      } else {
+        setMessage("인증 메일을 보냈어요! 메일함을 확인해주세요.");
+      }
     } else {
-      await supabase.auth.signInWithOAuth({
-        provider: "kakao",
-        options: { redirectTo: `${window.location.origin}/api/auth/callback` },
-      });
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) {
+        setError(error.message === "Invalid login credentials" ? "이메일 또는 비밀번호가 맞지 않아요" : error.message);
+      } else {
+        window.location.href = "/chat";
+      }
     }
+    setLoading(false);
   };
 
   return (
@@ -35,46 +62,90 @@ export default function LoginPage() {
           </p>
         </div>
 
-        {/* Social Login Buttons */}
-        <div className="space-y-3">
-          <button
-            onClick={() => handleSocialLogin("kakao")}
-            className="w-full flex items-center justify-center gap-3 py-4 rounded-2xl text-sm font-bold transition-all hover:scale-[1.01] active:scale-[0.99]"
-            style={{ backgroundColor: "#FEE500", color: "#191919" }}
-          >
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-              <path d="M10 3C5.58 3 2 5.8 2 9.24c0 2.2 1.46 4.13 3.66 5.23l-.93 3.43c-.08.3.26.54.52.37l4.1-2.72c.21.02.43.03.65.03 4.42 0 8-2.8 8-6.24S14.42 3 10 3z" fill="#191919"/>
-            </svg>
-            카카오로 시작하기
-          </button>
+        {mode === "main" ? (
+          <>
+            {/* Social Login */}
+            <div className="space-y-3">
+              <button
+                onClick={handleKakaoLogin}
+                className="w-full flex items-center justify-center gap-3 py-4 rounded-2xl text-sm font-bold transition-all hover:scale-[1.01] active:scale-[0.99]"
+                style={{ backgroundColor: "#FEE500", color: "#191919" }}
+              >
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                  <path d="M10 3C5.58 3 2 5.8 2 9.24c0 2.2 1.46 4.13 3.66 5.23l-.93 3.43c-.08.3.26.54.52.37l4.1-2.72c.21.02.43.03.65.03 4.42 0 8-2.8 8-6.24S14.42 3 10 3z" fill="#191919"/>
+                </svg>
+                카카오로 시작하기
+              </button>
 
-          <button
-            onClick={() => handleSocialLogin("naver")}
-            className="w-full flex items-center justify-center gap-3 py-4 rounded-2xl text-sm font-bold text-white transition-all hover:scale-[1.01] active:scale-[0.99]"
-            style={{ backgroundColor: "#03C75A" }}
-          >
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-              <path d="M13.36 10.53L6.4 3H3v14h3.64V9.47L13.6 17H17V3h-3.64v7.53z" fill="white"/>
-            </svg>
-            네이버로 시작하기
-          </button>
-        </div>
+              <button
+                onClick={() => setMode("email")}
+                className="w-full flex items-center justify-center gap-3 py-4 rounded-2xl text-sm font-bold transition-all hover:scale-[1.01] active:scale-[0.99]"
+                style={{ backgroundColor: "#FFFFFF", color: "#4E5968", border: "1px solid #E5E8EB" }}
+              >
+                <Mail className="w-5 h-5" />
+                이메일로 시작하기
+              </button>
+            </div>
 
-        {/* Divider */}
-        <div className="flex items-center gap-4 my-8">
-          <div className="flex-1 h-px" style={{ backgroundColor: "#E5E8EB" }} />
-          <span className="text-xs" style={{ color: "#8B95A1" }}>또는</span>
-          <div className="flex-1 h-px" style={{ backgroundColor: "#E5E8EB" }} />
-        </div>
+            {/* Divider */}
+            <div className="flex items-center gap-4 my-8">
+              <div className="flex-1 h-px" style={{ backgroundColor: "#E5E8EB" }} />
+              <span className="text-xs" style={{ color: "#8B95A1" }}>또는</span>
+              <div className="flex-1 h-px" style={{ backgroundColor: "#E5E8EB" }} />
+            </div>
 
-        {/* Guest */}
-        <a
-          href="/chat?guest=true"
-          className="block w-full text-center py-4 rounded-2xl text-sm font-bold transition-all hover:scale-[1.01] active:scale-[0.99]"
-          style={{ backgroundColor: "#F2F4F6", color: "#6B7684" }}
-        >
-          비회원으로 1회 체험하기
-        </a>
+            {/* Guest */}
+            <a
+              href="/chat?guest=true"
+              className="block w-full text-center py-4 rounded-2xl text-sm font-bold transition-all hover:scale-[1.01] active:scale-[0.99]"
+              style={{ backgroundColor: "#F2F4F6", color: "#6B7684" }}
+            >
+              비회원으로 3회 체험하기
+            </a>
+          </>
+        ) : (
+          <>
+            {/* Email Login/Signup Form */}
+            <button onClick={() => { setMode("main"); setError(""); setMessage(""); }}
+              className="flex items-center gap-1 text-sm mb-6" style={{ color: "#6B7684" }}>
+              <ArrowLeft className="w-4 h-4" /> 돌아가기
+            </button>
+
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm font-bold mb-2 block" style={{ color: "#191F28" }}>이메일</label>
+                <input type="email" value={email} onChange={e => setEmail(e.target.value)}
+                  placeholder="example@email.com"
+                  className="w-full px-4 py-3.5 rounded-xl text-sm"
+                  style={{ backgroundColor: "#FFFFFF", border: "1px solid #E5E8EB", color: "#191F28" }} />
+              </div>
+              <div>
+                <label className="text-sm font-bold mb-2 block" style={{ color: "#191F28" }}>비밀번호</label>
+                <input type="password" value={password} onChange={e => setPassword(e.target.value)}
+                  placeholder={isSignUp ? "6자 이상 입력해주세요" : "비밀번호 입력"}
+                  className="w-full px-4 py-3.5 rounded-xl text-sm"
+                  style={{ backgroundColor: "#FFFFFF", border: "1px solid #E5E8EB", color: "#191F28" }} />
+              </div>
+
+              {error && <p className="text-sm" style={{ color: "#F04452" }}>{error}</p>}
+              {message && <p className="text-sm" style={{ color: "#3182F6" }}>{message}</p>}
+
+              <button onClick={handleEmailAuth} disabled={loading || !email || !password}
+                className="w-full py-4 rounded-2xl text-sm font-bold text-white transition-all hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50"
+                style={{ backgroundColor: "#3182F6" }}>
+                {loading ? "처리 중..." : isSignUp ? "회원가입" : "로그인"}
+              </button>
+
+              <p className="text-center text-sm" style={{ color: "#8B95A1" }}>
+                {isSignUp ? "이미 계정이 있으신가요?" : "아직 계정이 없으신가요?"}{" "}
+                <button onClick={() => { setIsSignUp(!isSignUp); setError(""); setMessage(""); }}
+                  className="font-bold" style={{ color: "#3182F6" }}>
+                  {isSignUp ? "로그인" : "회원가입"}
+                </button>
+              </p>
+            </div>
+          </>
+        )}
 
         <p className="text-xs text-center mt-6 leading-relaxed" style={{ color: "#8B95A1" }}>
           로그인 시{" "}
