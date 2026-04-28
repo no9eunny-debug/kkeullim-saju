@@ -170,14 +170,20 @@ export default function ChatPage() {
 
   const canProceed = mbti && birthDate && gender;
 
-  // 유저 세션 체크
+  // 유저 세션 체크 (안정적으로)
   useEffect(() => {
     const supabase = createClient();
-    supabase.auth.getUser().then(({ data }) => {
-      if (data.user) {
-        setUserId(data.user.id);
+    // 먼저 세션 확인
+    supabase.auth.getSession().then(({ data }) => {
+      if (data.session?.user) {
+        setUserId(data.session.user.id);
       }
     });
+    // 세션 변경 감지
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUserId(session?.user?.id || null);
+    });
+    return () => subscription.unsubscribe();
   }, []);
 
   // 저장된 프로필 불러오기

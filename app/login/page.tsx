@@ -1,9 +1,9 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Sparkles, Mail, ArrowLeft } from "lucide-react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 
 const ERROR_MESSAGES: Record<string, string> = {
   kakao_cancelled: "카카오 로그인이 취소되었어요",
@@ -18,6 +18,7 @@ const ERROR_MESSAGES: Record<string, string> = {
 
 function LoginForm() {
   const supabase = createClient();
+  const router = useRouter();
   const searchParams = useSearchParams();
   const urlError = searchParams.get("error");
 
@@ -29,6 +30,15 @@ function LoginForm() {
   const [message, setMessage] = useState("");
   const [error, setError] = useState(urlError ? (ERROR_MESSAGES[urlError] || "로그인 오류가 발생했어요") : "");
 
+  // 이미 로그인 상태면 채팅으로 이동
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      if (data.session) {
+        router.replace("/chat");
+      }
+    });
+  }, []);
+
   const siteUrl = typeof window !== "undefined" ? window.location.origin : "";
 
   const handleKakaoLogin = () => {
@@ -36,7 +46,6 @@ function LoginForm() {
       client_id: process.env.NEXT_PUBLIC_KAKAO_REST_API_KEY || "",
       redirect_uri: `${siteUrl}/api/auth/kakao/callback`,
       response_type: "code",
-      scope: "account_email profile_nickname",
     });
     window.location.href = `https://kauth.kakao.com/oauth/authorize?${params}`;
   };
@@ -71,11 +80,13 @@ function LoginForm() {
         setIsSignUp(false);
       }
     } else {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) {
         setError("이메일 또는 비밀번호가 맞지 않아요");
-      } else {
-        window.location.href = "/chat";
+      } else if (data.session) {
+        // 세션이 확실히 세팅된 후 이동
+        router.push("/chat");
+        return;
       }
     }
     setLoading(false);
@@ -131,7 +142,7 @@ function LoginForm() {
               </button>
             </div>
 
-            {/* Error from URL */}
+            {/* Error */}
             {error && (
               <p className="text-sm text-center mt-4" style={{ color: "#F04452" }}>{error}</p>
             )}

@@ -50,11 +50,8 @@ export async function GET(request: NextRequest) {
     const profileData = await profileRes.json();
 
     const kakaoAccount = profileData.kakao_account;
-    const email = kakaoAccount?.email;
-    if (!email) {
-      return NextResponse.redirect(`${origin}/login?error=kakao_no_email`);
-    }
-
+    // 이메일이 없으면 카카오 ID 기반 이메일 생성
+    const email = kakaoAccount?.email || `kakao_${profileData.id}@kakao.user`;
     const name = kakaoAccount?.profile?.nickname || "";
 
     // 3. Supabase 사용자 생성 (이미 존재하면 무시)
