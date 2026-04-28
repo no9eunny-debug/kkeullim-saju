@@ -162,7 +162,16 @@ export default function ChatPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const tipInterval = useRef<NodeJS.Timeout | null>(null);
 
-  const canProceed = mbti && birthDate && gender;
+  const canProceed = mbti && birthDate && gender && nickname.trim();
+
+  // 닉네임 localStorage 저장/불러오기
+  useEffect(() => {
+    const saved = localStorage.getItem("saju_nickname");
+    if (saved) setNickname(saved);
+  }, []);
+  useEffect(() => {
+    if (nickname.trim()) localStorage.setItem("saju_nickname", nickname.trim());
+  }, [nickname]);
 
   // 유저 세션 체크 (안정적으로)
   useEffect(() => {
@@ -346,6 +355,10 @@ export default function ChatPage() {
     callAnalysis(cat, partnerParams);
   };
 
+  // 상대방 프로필 저장 팝업
+  const [showPartnerSave, setShowPartnerSave] = useState(false);
+  const [partnerSaveName, setPartnerSaveName] = useState("");
+
   // 상대방 정보 포함 분석 시작
   const handleStartWithPartner = () => {
     const params = wantPartner ? {
@@ -354,6 +367,15 @@ export default function ChatPage() {
       partnerBirthTime: partnerTimeUnknown ? null : partnerBirthTime || null,
       partnerGender: partnerGender || null,
     } : {};
+    // 상대방 정보가 있고, 아직 저장 안 된 새 정보면 저장 여부 묻기
+    if (wantPartner && partnerBirthDate) {
+      const alreadySaved = savedProfiles.some(p =>
+        p.birth_date === partnerBirthDate && p.mbti === (partnerMbti || null)
+      );
+      if (!alreadySaved) {
+        setShowPartnerSave(true);
+      }
+    }
     startChatting(category, params);
   };
 
@@ -373,6 +395,7 @@ export default function ChatPage() {
           mbti, birthDate,
           birthTime: birthTimeUnknown ? null : birthTime || null,
           gender, category,
+          nickname: nickname || undefined,
           sessionId, message: userMsg, isFollowUp: true,
           userId: userId || undefined,
           guestId: userId ? undefined : getGuestId(),
@@ -556,17 +579,17 @@ export default function ChatPage() {
               </div>
             )}
 
-            {/* 닉네임 */}
+            {/* 닉네임 (필수) */}
             <div>
               <label className="text-sm font-bold mb-3 block" style={{ color: "#191F28" }}>
-                닉네임 <span className="text-xs font-normal" style={{ color: "#8B95A1" }}>(선택)</span>
+                닉네임 <span className="text-xs font-normal" style={{ color: "#F04452" }}>*필수</span>
               </label>
               <input type="text" value={nickname} onChange={e => setNickname(e.target.value)}
-                placeholder="분석 결과에서 불릴 이름 (예: 동은님, 블카님)"
+                placeholder="분석에서 불릴 이름 (예: 동은, 블카, 민지)"
                 maxLength={10}
                 className="w-full px-4 py-3.5 rounded-xl text-sm outline-none"
-                style={{ backgroundColor: "#FFFFFF", border: "1px solid #E5E8EB", color: "#191F28" }} />
-              <p className="text-xs mt-2" style={{ color: "#8B95A1" }}>입력하면 AI가 닉네임으로 친근하게 불러줘요</p>
+                style={{ backgroundColor: "#FFFFFF", border: nickname ? "2px solid #3182F6" : "1px solid #E5E8EB", color: "#191F28" }} />
+              <p className="text-xs mt-2" style={{ color: "#3182F6" }}>AI가 닉네임으로 친근하게 불러줘요 ✨</p>
             </div>
 
             {/* 프로필 저장 안내 배너 */}
@@ -758,13 +781,14 @@ export default function ChatPage() {
                 }
 
                 return (
-                  <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
+                  <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"} animate-[fadeInUp_0.4s_ease-out]`}>
                     <div className={`rounded-2xl px-5 py-4 text-sm ${msg.role === "user" ? "max-w-[75%]" : "max-w-[90%]"}`}
                       style={{
                         backgroundColor: msg.role === "user" ? "#3182F6" : "#FFFFFF",
                         color: msg.role === "user" ? "#FFFFFF" : "#333D4B",
                         border: msg.role === "assistant" ? "1px solid #E5E8EB" : "none",
                         lineHeight: "1.8",
+                        boxShadow: msg.role === "assistant" ? "0 2px 8px rgba(0,0,0,0.04)" : "none",
                       }}>
                       {msg.role === "assistant" ? (
                         <MessageContent content={msg.content} />
@@ -778,17 +802,35 @@ export default function ChatPage() {
 
               {/* 후속 질문 추천 칩 */}
               {!loading && messages.length > 0 && messages[messages.length - 1]?.role === "assistant" && (
-                <div className="space-y-2 pt-2">
-                  <p className="text-xs font-medium" style={{ color: "#8B95A1" }}>이런 것도 물어보세요</p>
-                  <div className="flex flex-wrap gap-2">
+                <div className="space-y-3 pt-4 animate-[fadeInUp_0.5s_ease-out]">
+                  <p className="text-sm font-bold" style={{ color: "#3182F6" }}>💬 이런 것도 물어보세요</p>
+                  <div className="flex flex-col gap-2">
                     {(FOLLOW_UP_SUGGESTIONS[category] || FOLLOW_UP_SUGGESTIONS.basic).map((suggestion, i) => (
                       <button key={i} onClick={() => handleSend(suggestion)}
-                        className="flex items-center gap-1 px-3.5 py-2 rounded-full text-xs font-medium transition-all hover:scale-[1.02]"
-                        style={{ backgroundColor: "#FFFFFF", border: "1px solid #D1D6DB", color: "#4E5968" }}>
-                        {suggestion}
-                        <ChevronRight className="w-3 h-3" />
+                        className="flex items-center justify-between w-full px-5 py-3.5 rounded-2xl text-sm font-medium transition-all hover:scale-[1.01] hover:shadow-md"
+                        style={{ backgroundColor: "#FFFFFF", border: "1px solid #E5E8EB", color: "#191F28", animationDelay: `${i * 100}ms` }}>
+                        <span>{suggestion}</span>
+                        <ChevronRight className="w-4 h-4 shrink-0" style={{ color: "#3182F6" }} />
                       </button>
                     ))}
+                  </div>
+                </div>
+              )}
+
+              {/* 상대방 프로필 저장 팝업 */}
+              {showPartnerSave && (
+                <div className="animate-[fadeInUp_0.4s_ease-out] p-4 rounded-2xl space-y-3" style={{ backgroundColor: "#FFF8E1", border: "1px solid #FFE082" }}>
+                  <p className="text-sm font-bold" style={{ color: "#191F28" }}>상대방 정보를 저장할까요?</p>
+                  <p className="text-xs" style={{ color: "#6B7684" }}>저장하면 다음에 바로 불러올 수 있어요</p>
+                  <input value={partnerSaveName} onChange={e => setPartnerSaveName(e.target.value)}
+                    placeholder="이름 (예: 남자친구, 썸남, 전남친)"
+                    className="w-full px-4 py-3 rounded-xl text-sm outline-none" style={{ backgroundColor: "#FFFFFF", border: "1px solid #E5E8EB", color: "#191F28" }} />
+                  <div className="flex gap-2">
+                    <button onClick={() => setShowPartnerSave(false)}
+                      className="flex-1 py-2.5 rounded-xl text-sm font-bold" style={{ backgroundColor: "#F2F4F6", color: "#4E5968" }}>괜찮아요</button>
+                    <button onClick={() => { if (partnerSaveName.trim()) { savePartnerProfile(partnerSaveName.trim()); } setShowPartnerSave(false); setPartnerSaveName(""); }}
+                      disabled={!partnerSaveName.trim()}
+                      className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white disabled:opacity-40" style={{ backgroundColor: "#3182F6" }}>저장하기</button>
                   </div>
                 </div>
               )}
