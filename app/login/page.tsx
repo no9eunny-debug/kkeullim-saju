@@ -1,24 +1,48 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Sparkles, Mail, ArrowLeft } from "lucide-react";
+import { useSearchParams } from "next/navigation";
 
-export default function LoginPage() {
+const ERROR_MESSAGES: Record<string, string> = {
+  kakao_cancelled: "카카오 로그인이 취소되었어요",
+  kakao_token: "카카오 인증에 실패했어요. 다시 시도해주세요",
+  kakao_no_email: "카카오 계정에 이메일이 없어요. 이메일 제공에 동의해주세요",
+  kakao_create: "계정 생성에 실패했어요. 다시 시도해주세요",
+  kakao_session: "세션 생성에 실패했어요. 다시 시도해주세요",
+  kakao_verify: "인증에 실패했어요. 다시 시도해주세요",
+  kakao_unknown: "카카오 로그인 중 오류가 발생했어요",
+  auth_failed: "로그인에 실패했어요. 다시 시도해주세요",
+};
+
+function LoginForm() {
   const supabase = createClient();
+  const searchParams = useSearchParams();
+  const urlError = searchParams.get("error");
+
   const [mode, setMode] = useState<"main" | "email">("main");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isSignUp, setIsSignUp] = useState(false);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
-  const [error, setError] = useState("");
+  const [error, setError] = useState(urlError ? (ERROR_MESSAGES[urlError] || "로그인 오류가 발생했어요") : "");
 
-  const handleKakaoLogin = async () => {
-    await supabase.auth.signInWithOAuth({
-      provider: "kakao",
-      options: { redirectTo: `${window.location.origin}/api/auth/callback` },
+  const siteUrl = typeof window !== "undefined" ? window.location.origin : "";
+
+  const handleKakaoLogin = () => {
+    const params = new URLSearchParams({
+      client_id: process.env.NEXT_PUBLIC_KAKAO_REST_API_KEY || "",
+      redirect_uri: `${siteUrl}/api/auth/kakao/callback`,
+      response_type: "code",
+      scope: "account_email profile_nickname",
     });
+    window.location.href = `https://kauth.kakao.com/oauth/authorize?${params}`;
+  };
+
+  const handleNaverLogin = () => {
+    alert("네이버 로그인은 현재 서비스 준비중이에요. 카카오 또는 이메일로 시작해주세요!");
   };
 
   const handleEmailAuth = async () => {
@@ -30,17 +54,26 @@ export default function LoginPage() {
       const { error } = await supabase.auth.signUp({
         email,
         password,
-        options: { emailRedirectTo: `${window.location.origin}/api/auth/callback` },
+        options: { emailRedirectTo: `${siteUrl}/api/auth/callback` },
       });
       if (error) {
-        setError(error.message === "User already registered" ? "이미 가입된 이메일이에요" : error.message);
+        if (error.message.includes("already")) {
+          setError("이미 가입된 이메일이에요");
+        } else if (error.message.includes("valid email")) {
+          setError("올바른 이메일 형식이 아니에요");
+        } else if (error.message.includes("at least")) {
+          setError("비밀번호는 6자 이상이어야 해요");
+        } else {
+          setError("회원가입에 실패했어요. 다시 시도해주세요");
+        }
       } else {
-        setMessage("인증 메일을 보냈어요! 메일함을 확인해주세요.");
+        setMessage("가입 완료! 바로 로그인해보세요.");
+        setIsSignUp(false);
       }
     } else {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) {
-        setError(error.message === "Invalid login credentials" ? "이메일 또는 비밀번호가 맞지 않아요" : error.message);
+        setError("이메일 또는 비밀번호가 맞지 않아요");
       } else {
         window.location.href = "/chat";
       }
@@ -58,7 +91,7 @@ export default function LoginPage() {
             <span className="text-2xl font-black" style={{ color: "#191F28" }}>합리적 미신</span>
           </div>
           <p className="text-sm" style={{ color: "#8B95A1" }}>
-            MBTI × 사주로 보는 나의 운명
+            MBTI x 사주로 보는 나의 운명
           </p>
         </div>
 
@@ -78,6 +111,17 @@ export default function LoginPage() {
               </button>
 
               <button
+                onClick={handleNaverLogin}
+                className="w-full flex items-center justify-center gap-3 py-4 rounded-2xl text-sm font-bold transition-all hover:scale-[1.01] active:scale-[0.99]"
+                style={{ backgroundColor: "#03C75A", color: "#FFFFFF" }}
+              >
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                  <path d="M13.56 10.7L6.15 0H0v20h6.44V9.3L13.85 20H20V0h-6.44z" fill="#FFFFFF"/>
+                </svg>
+                네이버로 시작하기
+              </button>
+
+              <button
                 onClick={() => setMode("email")}
                 className="w-full flex items-center justify-center gap-3 py-4 rounded-2xl text-sm font-bold transition-all hover:scale-[1.01] active:scale-[0.99]"
                 style={{ backgroundColor: "#FFFFFF", color: "#4E5968", border: "1px solid #E5E8EB" }}
@@ -86,6 +130,11 @@ export default function LoginPage() {
                 이메일로 시작하기
               </button>
             </div>
+
+            {/* Error from URL */}
+            {error && (
+              <p className="text-sm text-center mt-4" style={{ color: "#F04452" }}>{error}</p>
+            )}
 
             {/* Divider */}
             <div className="flex items-center gap-4 my-8">
@@ -116,15 +165,16 @@ export default function LoginPage() {
                 <label className="text-sm font-bold mb-2 block" style={{ color: "#191F28" }}>이메일</label>
                 <input type="email" value={email} onChange={e => setEmail(e.target.value)}
                   placeholder="example@email.com"
-                  className="w-full px-4 py-3.5 rounded-xl text-sm"
+                  className="w-full px-4 py-3.5 rounded-xl text-sm outline-none"
                   style={{ backgroundColor: "#FFFFFF", border: "1px solid #E5E8EB", color: "#191F28" }} />
               </div>
               <div>
                 <label className="text-sm font-bold mb-2 block" style={{ color: "#191F28" }}>비밀번호</label>
                 <input type="password" value={password} onChange={e => setPassword(e.target.value)}
                   placeholder={isSignUp ? "6자 이상 입력해주세요" : "비밀번호 입력"}
-                  className="w-full px-4 py-3.5 rounded-xl text-sm"
-                  style={{ backgroundColor: "#FFFFFF", border: "1px solid #E5E8EB", color: "#191F28" }} />
+                  className="w-full px-4 py-3.5 rounded-xl text-sm outline-none"
+                  style={{ backgroundColor: "#FFFFFF", border: "1px solid #E5E8EB", color: "#191F28" }}
+                  onKeyDown={e => { if (e.key === "Enter" && email && password) handleEmailAuth(); }} />
               </div>
 
               {error && <p className="text-sm" style={{ color: "#F04452" }}>{error}</p>}
@@ -154,5 +204,13 @@ export default function LoginPage() {
         </p>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginForm />
+    </Suspense>
   );
 }
