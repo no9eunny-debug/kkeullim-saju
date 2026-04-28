@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { Sparkles, Star, ChevronDown, Check, ArrowRight, Heart, Briefcase, Coins, Shield } from "lucide-react";
@@ -118,47 +118,81 @@ function Empathy() {
 
 /* ─────────── Reviews (후기) ─────────── */
 const reviews = [
-  { name: "김서연", mbti: "INFJ", text: "소름 돋았어요... 일주 분석이 진짜 저를 그대로 설명하더라고요. MBTI랑 엮으니까 더 정확해요.", rating: 5 },
-  { name: "이지은", mbti: "ENFP", text: "새벽 3시까지 질문했어요 ㅋㅋ 연애운 보다가 재물운, 건강운까지... 중독성 있어요", rating: 5 },
-  { name: "박지현", mbti: "ISTP", text: "다른 사주 앱이랑 차원이 달라요. AI 3개가 교차 분석해주니까 훨씬 깊이 있고 신뢰가 가요.", rating: 5 },
-  { name: "최민아", mbti: "ESFJ", text: "남자친구랑 궁합 보는데 너무 재밌었어요. 서로 부족한 점까지 알려줘서 대화 주제가 됐어요!", rating: 5 },
-  { name: "정유나", mbti: "INTJ", text: "사주에 관심 없었는데 MBTI랑 같이 보니까 과학적(?)으로 느껴져서 빠졌어요", rating: 4 },
-  { name: "한소희", mbti: "ISFP", text: "로딩 중에 나오는 사주 팁도 재밌고, 결과가 진짜 공감 가요. 친구들한테 다 공유했어요", rating: 5 },
+  { name: "김OO", mbti: "INFJ", text: "소름 돋았어요... 일주 분석이 진짜 저를 그대로 설명하더라고요. MBTI랑 엮으니까 더 정확해요.", rating: 5 },
+  { name: "이OO", mbti: "ENFP", text: "새벽 3시까지 질문했어요 ㅋㅋ 연애운 보다가 재물운, 건강운까지... 중독성 있어요", rating: 5 },
+  { name: "박OO", mbti: "ISTP", text: "다른 사주 앱이랑 차원이 달라요. AI가 교차 분석해주니까 훨씬 깊이 있고 신뢰가 가요.", rating: 5 },
+  { name: "최OO", mbti: "ESFJ", text: "남자친구랑 궁합 보는데 너무 재밌었어요. 서로 부족한 점까지 알려줘서 대화 주제가 됐어요!", rating: 5 },
+  { name: "정OO", mbti: "INTJ", text: "사주에 관심 없었는데 MBTI랑 같이 보니까 과학적으로 느껴져서 빠졌어요. 친구한테 바로 공유함", rating: 4 },
+  { name: "한OO", mbti: "ISFP", text: "로딩 중에 나오는 사주 팁도 재밌고, 결과가 진짜 공감 가요. 카톡으로 다 공유했어요", rating: 5 },
+  { name: "윤OO", mbti: "INFP", text: "재회운 봤는데 진짜 울뻔... 사주로 보는 연애 패턴이 너무 정확해서 소름이에요", rating: 5 },
+  { name: "장OO", mbti: "ENTJ", text: "직업 적성 분석이 신기했어요. 지금 이직 고민 중인데 방향이 좀 잡힌 느낌?", rating: 5 },
+  { name: "서OO", mbti: "ENTP", text: "궁합 보고 남친이랑 한참 얘기했어요 ㅋㅋ 사주로 보니까 진짜 잘 맞는 부분이랑 조심할 부분이 딱 나오더라고요", rating: 5 },
+  { name: "조OO", mbti: "ISTJ", text: "재물운 분석이 현실적이어서 좋았어요. 막연한 부자될거야~ 가 아니라 구체적인 방향을 알려줘요", rating: 4 },
+  { name: "민OO", mbti: "ENFJ", text: "건강운 봤는데 평소에 약한 부분이랑 딱 맞아서 깜짝 놀랐어요. 오행 보완법도 실용적!", rating: 5 },
+  { name: "강OO", mbti: "ESTP", text: "올해 운세가 진짜 찰떡이에요. 상반기에 조심하라는 거 보고 이미 겪은 일이라 소름 돋음", rating: 5 },
 ];
 
 function Reviews() {
+  const [scrollX, setScrollX] = useState(0);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+    const interval = setInterval(() => {
+      setScrollX(prev => {
+        const maxScroll = container.scrollWidth - container.clientWidth;
+        const next = prev + 1;
+        if (next >= maxScroll) return 0;
+        return next;
+      });
+    }, 30);
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    if (containerRef.current) {
+      containerRef.current.scrollLeft = scrollX;
+    }
+  }, [scrollX]);
+
   return (
-    <section className="py-24 px-5">
-      <div className="mx-auto max-w-5xl">
+    <section className="py-24">
+      <div className="mx-auto max-w-5xl px-5">
         <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} custom={0} variants={fadeUp} className="text-center mb-16">
           <p className="text-sm font-bold mb-3" style={{ color: "#3182F6" }}>실제 이용 후기</p>
           <h2 className="text-3xl sm:text-4xl font-black" style={{ color: "#191F28" }}>이미 많은 분들이 빠져들었어요</h2>
         </motion.div>
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
-          {reviews.map((r, i) => (
-            <motion.div key={i} initial="hidden" whileInView="visible" viewport={{ once: true }} custom={i * 0.5 + 1} variants={fadeUp}
-              className="rounded-2xl p-6" style={{ backgroundColor: "#F8FAFB", border: "1px solid #E5E8EB" }}>
-              <div className="flex items-center gap-1 mb-4">
-                {Array.from({ length: r.rating }).map((_, j) => (
-                  <Star key={j} className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                ))}
-                {Array.from({ length: 5 - r.rating }).map((_, j) => (
-                  <Star key={`e${j}`} className="w-4 h-4 text-gray-200" />
-                ))}
+      </div>
+      <div ref={containerRef} className="flex gap-5 overflow-x-auto scrollbar-hide px-5"
+        style={{ scrollBehavior: "auto", msOverflowStyle: "none", scrollbarWidth: "none" }}
+        onMouseEnter={() => { if (containerRef.current) setScrollX(containerRef.current.scrollLeft); }}
+        onMouseLeave={() => {}}>
+        <div className="shrink-0 w-1 sm:w-8" />
+        {reviews.map((r, i) => (
+          <motion.div key={i} initial="hidden" whileInView="visible" viewport={{ once: true }} custom={1} variants={fadeUp}
+            className="shrink-0 w-72 rounded-2xl p-6" style={{ backgroundColor: "#F8FAFB", border: "1px solid #E5E8EB" }}>
+            <div className="flex items-center gap-1 mb-4">
+              {Array.from({ length: r.rating }).map((_, j) => (
+                <Star key={j} className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+              ))}
+              {Array.from({ length: 5 - r.rating }).map((_, j) => (
+                <Star key={`e${j}`} className="w-4 h-4 text-gray-200" />
+              ))}
+            </div>
+            <p className="text-sm leading-relaxed mb-5" style={{ color: "#4E5968" }}>&ldquo;{r.text}&rdquo;</p>
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold" style={{ backgroundColor: "#EBF4FF", color: "#3182F6" }}>
+                {r.name[0]}
               </div>
-              <p className="text-sm leading-relaxed mb-5" style={{ color: "#4E5968" }}>&ldquo;{r.text}&rdquo;</p>
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold" style={{ backgroundColor: "#EBF4FF", color: "#3182F6" }}>
-                  {r.name[0]}
-                </div>
-                <div>
-                  <p className="text-sm font-bold" style={{ color: "#191F28" }}>{r.name}</p>
-                  <p className="text-xs" style={{ color: "#8B95A1" }}>{r.mbti}</p>
-                </div>
+              <div>
+                <p className="text-sm font-bold" style={{ color: "#191F28" }}>{r.name}</p>
+                <p className="text-xs" style={{ color: "#8B95A1" }}>{r.mbti}</p>
               </div>
-            </motion.div>
-          ))}
-        </div>
+            </div>
+          </motion.div>
+        ))}
+        <div className="shrink-0 w-1 sm:w-8" />
       </div>
     </section>
   );
