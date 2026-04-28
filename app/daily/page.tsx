@@ -2,8 +2,19 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Sparkles, ArrowLeft, ArrowRight, Sun, Moon } from "lucide-react";
+import { Sparkles, ArrowLeft, ArrowRight, Sun, Moon, User } from "lucide-react";
 import Link from "next/link";
+import { createClient } from "@/lib/supabase/client";
+
+interface SavedProfile {
+  id: string;
+  name: string;
+  mbti: string | null;
+  birth_date: string;
+  birth_time: string | null;
+  gender: string | null;
+  is_me: boolean;
+}
 
 const MBTI_TYPES = [
   "INTJ", "INTP", "ENTJ", "ENTP",
@@ -59,21 +70,53 @@ export default function DailyPage() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<DailyResult | null>(null);
   const [animated, setAnimated] = useState(false);
+  const [savedProfiles, setSavedProfiles] = useState<SavedProfile[]>([]);
+  const [activeProfileName, setActiveProfileName] = useState<string | null>(null);
 
-  // localStorage에서 이전 입력 불러오기
+  // 로그인 유저의 저장된 프로필 불러오기 + 내 프로필 자동 적용
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem("saju_input");
-      if (saved) {
-        const data = JSON.parse(saved);
-        if (data.birthDate) setBirthDate(data.birthDate);
-        if (data.mbti) setMbti(data.mbti);
-        if (data.birthDate) setHasInput(true);
+    const loadProfiles = async () => {
+      const supabase = createClient();
+      const { data: { session } } = await supabase.auth.getSession();
+
+      if (session?.user) {
+        const res = await fetch(`/api/profiles?userId=${session.user.id}`);
+        const profiles = await res.json();
+        if (Array.isArray(profiles) && profiles.length > 0) {
+          setSavedProfiles(profiles);
+          // "나" 프로필이 있으면 자동 적용
+          const myProfile = profiles.find((p: SavedProfile) => p.is_me);
+          if (myProfile) {
+            setBirthDate(myProfile.birth_date);
+            setMbti(myProfile.mbti || "");
+            setActiveProfileName(myProfile.name);
+            setHasInput(true);
+            return; // 로그인 + 내 프로필 있으면 localStorage 스킵
+          }
+        }
       }
-    } catch {
-      // ignore
-    }
+
+      // 프로필 없으면 localStorage fallback
+      try {
+        const saved = localStorage.getItem("saju_input");
+        if (saved) {
+          const data = JSON.parse(saved);
+          if (data.birthDate) setBirthDate(data.birthDate);
+          if (data.mbti) setMbti(data.mbti);
+          if (data.birthDate) setHasInput(true);
+        }
+      } catch {}
+    };
+    loadProfiles();
   }, []);
+
+  const loadProfile = (profile: SavedProfile) => {
+    setBirthDate(profile.birth_date);
+    setMbti(profile.mbti || "");
+    setActiveProfileName(profile.name);
+    setResult(null);
+    setHasInput(false);
+  };
 
   // 결과 애니메이션 트리거
   useEffect(() => {
@@ -182,6 +225,34 @@ export default function DailyPage() {
                 생년월일과 MBTI로 오늘의 운세를 확인해보세요
               </p>
             </div>
+
+            {/* 저장된 프로필 선택 */}
+            {savedProfiles.length > 0 && (
+              <div>
+                <label className="text-sm font-bold mb-3 block" style={{ color: "#191F28" }}>누구의 운세를 볼까요?</label>
+                <div className="flex gap-2 overflow-x-auto pb-2">
+                  {savedProfiles.map(profile => (
+                    <button key={profile.id} onClick={() => loadProfile(profile)}
+                      className="shrink-0 flex items-center gap-2 px-4 py-3 rounded-2xl transition-all hover:shadow-md"
+                      style={{
+                        backgroundColor: activeProfileName === profile.name ? "#EBF4FF" : "#FFFFFF",
+                        border: activeProfileName === profile.name ? "2px solid #3182F6" : "1px solid #E5E8EB",
+                      }}>
+                      <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold"
+                        style={{ backgroundColor: profile.is_me ? "#3182F6" : "#F2F4F6", color: profile.is_me ? "#FFFFFF" : "#4E5968" }}>
+                        {profile.is_me ? <User className="w-4 h-4" /> : profile.name.charAt(0)}
+                      </div>
+                      <div className="text-left">
+                        <p className="text-xs font-bold" style={{ color: "#191F28" }}>
+                          {profile.name} {profile.is_me && <span className="text-[10px]" style={{ color: "#3182F6" }}>나</span>}
+                        </p>
+                        <p className="text-[10px]" style={{ color: "#8B95A1" }}>{profile.mbti || "?"} · {profile.birth_date}</p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* 생년월일 */}
             <div>
