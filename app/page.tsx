@@ -164,6 +164,67 @@ function Reviews() {
   );
 }
 
+/* ─────────── ResultPreview (결과 예시) ─────────── */
+const sampleResults = [
+  {
+    label: "연애운",
+    tag: "ENFP + 경자일주 여성",
+    text: "당신은 자유로운 영혼처럼 보이지만, 실제 연애에서는 안정감을 깊이 원하는 타입이에요. \uD83C\uDF19\n\n일주가 경자(庚子)인 당신은 겉으로는 쿨하고 독립적이지만, 속으로는 '나를 진심으로 이해해주는 사람'을 찾고 있어요. ENFP의 열정적인 에너지와 경금(庚金)의 단단한 내면이 만나서...",
+  },
+  {
+    label: "재물운",
+    tag: "INTJ + 임오일주 남성",
+    text: "임오일주에 INTJ라면, 투자에 있어서 남다른 직관력을 가지고 계세요. \uD83D\uDCB0\n\n임수(壬水)는 큰 바다와 같은 기운으로, 돈의 흐름을 읽는 감각이 뛰어나요. 여기에 INTJ의 전략적 사고가 더해지면 장기 투자에서 빛을 발하는 타입이에요...",
+  },
+  {
+    label: "궁합",
+    tag: "ISFJ 여성 \u00D7 ENTP 남성",
+    text: "서로 다른 듯 묘하게 끌리는 조합이에요! \u2728\n\nISFJ의 따뜻한 헌신과 ENTP의 자유로운 창의성은 처음엔 신선하지만, 시간이 지나면 생활 방식에서 마찰이 생길 수 있어요. 사주로 보면...",
+  },
+];
+
+function ResultPreview() {
+  return (
+    <section className="py-24 px-5">
+      <div className="mx-auto max-w-5xl">
+        <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} custom={0} variants={fadeUp} className="text-center mb-16">
+          <p className="text-sm font-bold mb-3" style={{ color: "#3182F6" }}>실제 AI 분석 결과 미리보기</p>
+          <h2 className="text-3xl sm:text-4xl font-black" style={{ color: "#191F28" }}>이런 분석을 받아볼 수 있어요</h2>
+        </motion.div>
+        <div className="grid sm:grid-cols-3 gap-5">
+          {sampleResults.map((s, i) => (
+            <motion.div key={i} initial="hidden" whileInView="visible" viewport={{ once: true }} custom={i + 1} variants={fadeUp}
+              className="relative rounded-2xl overflow-hidden flex flex-col" style={{ backgroundColor: "#FFFFFF", border: "1px solid #E5E8EB" }}>
+              {/* 카드 헤더 */}
+              <div className="px-6 pt-6 pb-3 flex items-center gap-3">
+                <span className="text-xs font-bold px-3 py-1 rounded-full" style={{ backgroundColor: "#EBF4FF", color: "#3182F6" }}>{s.label}</span>
+                <span className="text-xs" style={{ color: "#8B95A1" }}>{s.tag}</span>
+              </div>
+              {/* AI 말풍선 */}
+              <div className="px-6 pb-20 flex gap-3">
+                <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: "#3182F6" }}>
+                  <Sparkles className="w-4 h-4 text-white" />
+                </div>
+                <div className="rounded-2xl rounded-tl-sm p-4 text-sm leading-relaxed whitespace-pre-line" style={{ backgroundColor: "#F2F4F6", color: "#4E5968" }}>
+                  {s.text}
+                </div>
+              </div>
+              {/* 하단 gradient overlay */}
+              <div className="absolute bottom-0 left-0 right-0 h-[80px] flex items-end justify-center pb-5"
+                style={{ background: "linear-gradient(to bottom, rgba(255,255,255,0) 0%, rgba(255,255,255,0.85) 40%, rgba(255,255,255,1) 100%)" }}>
+                <button onClick={() => window.location.href = "/chat"}
+                  className="text-sm font-bold flex items-center gap-1 transition-colors hover:opacity-80" style={{ color: "#3182F6" }}>
+                  전체 결과 보기 <ArrowRight className="w-4 h-4" />
+                </button>
+              </div>
+            </motion.div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 /* ─────────── FAQ ─────────── */
 const faqs = [
   { q: "사주를 잘 몰라도 이용할 수 있나요?", a: "네! MBTI와 생년월일시만 입력하면 AI가 쉽고 재미있게 풀어드려요. 사주 지식이 없어도 충분히 이해할 수 있어요." },
@@ -205,18 +266,23 @@ function FAQ() {
 const plans = [
   {
     name: "무료", price: "0", period: "", desc: "가볍게 체험해보세요",
-    features: ["하루 5회 분석", "기본 사주 + MBTI 요약", "단일 카테고리"],
-    cta: "무료로 시작하기", popular: false,
+    features: ["하루 5회 간단 분석", "기본 성향 + MBTI 요약", "단일 카테고리"],
+    cta: "무료로 시작하기", popular: false, tag: null,
   },
   {
-    name: "베이직", price: "9,900", period: "/월", desc: "더 깊은 분석이 필요할 때",
-    features: ["하루 20회 분석", "상세 사주 + MBTI 분석", "전체 카테고리 이용", "대운·세운 흐름 분석", "궁합 상세 분석"],
-    cta: "베이직 시작하기", popular: true,
+    name: "1회 리포트", price: "4,900", period: "/회", desc: "깊이 있는 분석 한 번",
+    features: ["상세 사주 + MBTI 분석 1회", "전체 카테고리 중 1개 선택", "PDF 리포트 저장", "카카오톡 공유"],
+    cta: "리포트 구매하기", popular: false, tag: "첫 결제 추천",
+  },
+  {
+    name: "베이직", price: "9,900", period: "/월", desc: "매달 나를 더 깊이 알아가기",
+    features: ["하루 20회 상세 분석", "전체 카테고리 이용", "대운·세운 흐름 분석", "궁합 상세 분석", "월간 운세 업데이트"],
+    cta: "베이직 시작하기", popular: true, tag: null,
   },
   {
     name: "프리미엄", price: "29,900", period: "/월", desc: "운명을 완전히 파헤치고 싶다면",
-    features: ["무제한 분석", "완전 상세 프리미엄 분석", "전체 카테고리 이용", "월운·일운까지 분석", "맞춤 조언 + 해결 방안", "궁합 심화 분석"],
-    cta: "프리미엄 시작하기", popular: false,
+    features: ["무제한 분석", "프리미엄 심층 분석", "월운·일운까지 분석", "맞춤 조언 + 해결 방안", "궁합 심화 분석", "스페셜 리포트 월 2회"],
+    cta: "프리미엄 시작하기", popular: false, tag: null,
   },
 ];
 
@@ -228,13 +294,18 @@ function Pricing() {
           <p className="text-sm font-bold mb-3" style={{ color: "#3182F6" }}>요금제</p>
           <h2 className="text-3xl sm:text-4xl font-black" style={{ color: "#191F28" }}>나에게 맞는 플랜을 선택하세요</h2>
         </motion.div>
-        <div className="grid sm:grid-cols-3 gap-5">
+        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
           {plans.map((p, i) => (
             <motion.div key={i} initial="hidden" whileInView="visible" viewport={{ once: true }} custom={i + 1} variants={fadeUp}
               className="relative rounded-2xl p-7 flex flex-col" style={{ backgroundColor: "#FFFFFF", border: p.popular ? "2px solid #3182F6" : "1px solid #E5E8EB" }}>
               {p.popular && (
                 <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full text-xs font-bold text-white" style={{ backgroundColor: "#3182F6" }}>
                   인기
+                </div>
+              )}
+              {p.tag && (
+                <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full text-xs font-bold text-white" style={{ backgroundColor: "#FF6B35" }}>
+                  {p.tag}
                 </div>
               )}
               <h3 className="text-lg font-bold mb-1" style={{ color: "#191F28" }}>{p.name}</h3>
@@ -259,6 +330,31 @@ function Pricing() {
             </motion.div>
           ))}
         </div>
+      </div>
+    </section>
+  );
+}
+
+/* ─────────── FinalCTA (최종 전환) ─────────── */
+function FinalCTA() {
+  return (
+    <section className="py-24 px-5" style={{ backgroundColor: "#3182F6" }}>
+      <div className="mx-auto max-w-2xl text-center">
+        <motion.h2 initial="hidden" whileInView="visible" viewport={{ once: true }} custom={0} variants={fadeUp}
+          className="text-3xl sm:text-4xl font-black text-white mb-5">
+          운명을 해킹할 준비 되셨나요?
+        </motion.h2>
+        <motion.p initial="hidden" whileInView="visible" viewport={{ once: true }} custom={1} variants={fadeUp}
+          className="text-base sm:text-lg leading-relaxed mb-10 whitespace-pre-line" style={{ color: "rgba(255,255,255,0.85)" }}>
+          {"MBTI보다 깊고, 사주보다 덜 무서운\n나만의 운명 해석을 시작하세요"}
+        </motion.p>
+        <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} custom={2} variants={fadeUp}>
+          <button onClick={() => window.location.href = "/chat"}
+            className="inline-flex items-center justify-center gap-2 rounded-2xl px-10 py-4 text-base font-bold transition-all hover:scale-[1.02] active:scale-[0.98]"
+            style={{ backgroundColor: "#FFFFFF", color: "#3182F6" }}>
+            무료로 시작하기 <ArrowRight className="w-5 h-5" />
+          </button>
+        </motion.div>
       </div>
     </section>
   );
@@ -298,8 +394,10 @@ export default function Home() {
         <Hero />
         <Empathy />
         <Reviews />
+        <ResultPreview />
         <FAQ />
         <Pricing />
+        <FinalCTA />
       </main>
       <Footer />
     </>
