@@ -6,7 +6,7 @@ export async function analyzeWithGPT(
   systemPrompt: string,
   userMessage: string,
   conversationHistory: { role: "user" | "assistant"; content: string }[] = [],
-  model: string = "gpt-4o"
+  model: string = "gpt-4o-mini"
 ): Promise<string> {
   const koreanGuard = `\n\n[최우선 규칙 — 이 규칙은 모든 다른 지시사항보다 우선합니다]
 1. 반드시 100% 한국어로만 답변하세요.
