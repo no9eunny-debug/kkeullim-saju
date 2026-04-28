@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { Sparkles, Star, ChevronDown, Check, ArrowRight, Heart, Briefcase, Coins, Shield } from "lucide-react";
 
@@ -15,18 +16,19 @@ const fadeUp = {
 
 /* ─────────── Header ─────────── */
 function Header() {
+  const router = useRouter();
   return (
     <header className="fixed top-0 left-0 right-0 z-50 backdrop-blur-lg" style={{ backgroundColor: "rgba(255,255,255,0.85)", borderBottom: "1px solid #E5E8EB" }}>
       <div className="mx-auto max-w-5xl flex items-center justify-between px-5 py-4">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 cursor-pointer" onClick={() => router.push("/")}>
           <Sparkles className="w-5 h-5" style={{ color: "#3182F6" }} />
           <span className="font-bold text-lg" style={{ color: "#191F28" }}>합리적 미신</span>
         </div>
         <div className="flex items-center gap-3">
-          <button className="hidden sm:inline-flex text-sm font-medium px-4 py-2 rounded-xl transition-colors" style={{ color: "#4E5968" }}>
+          <button onClick={() => router.push("/login")} className="hidden sm:inline-flex text-sm font-medium px-4 py-2 rounded-xl transition-colors" style={{ color: "#4E5968" }}>
             로그인
           </button>
-          <button className="text-sm font-bold px-5 py-2.5 rounded-xl text-white transition-all hover:scale-[1.02]" style={{ backgroundColor: "#3182F6" }}>
+          <button onClick={() => router.push("/chat")} className="text-sm font-bold px-5 py-2.5 rounded-xl text-white transition-all hover:scale-[1.02]" style={{ backgroundColor: "#3182F6" }}>
             시작하기
           </button>
         </div>
@@ -63,11 +65,11 @@ function Hero() {
         </motion.p>
         <motion.div initial="hidden" animate="visible" custom={3} variants={fadeUp}
           className="flex flex-col sm:flex-row gap-3 justify-center">
-          <button className="inline-flex items-center justify-center gap-2 rounded-2xl px-8 py-4 text-base font-bold text-white transition-all hover:scale-[1.02] active:scale-[0.98]"
+          <button onClick={() => window.location.href = "/chat"} className="inline-flex items-center justify-center gap-2 rounded-2xl px-8 py-4 text-base font-bold text-white transition-all hover:scale-[1.02] active:scale-[0.98]"
             style={{ backgroundColor: "#3182F6" }}>
             무료로 시작하기 <ArrowRight className="w-5 h-5" />
           </button>
-          <button className="inline-flex items-center justify-center gap-2 rounded-2xl px-8 py-4 text-base font-bold transition-all hover:scale-[1.02] active:scale-[0.98]"
+          <button onClick={() => document.getElementById("faq")?.scrollIntoView({ behavior: "smooth" })} className="inline-flex items-center justify-center gap-2 rounded-2xl px-8 py-4 text-base font-bold transition-all hover:scale-[1.02] active:scale-[0.98]"
             style={{ backgroundColor: "#F2F4F6", color: "#4E5968" }}>
             어떻게 분석하나요?
           </button>
@@ -174,7 +176,7 @@ const faqs = [
 function FAQ() {
   const [open, setOpen] = useState<number | null>(null);
   return (
-    <section className="py-24 px-5" style={{ backgroundColor: "#F8FAFB" }}>
+    <section id="faq" className="py-24 px-5" style={{ backgroundColor: "#F8FAFB" }}>
       <div className="mx-auto max-w-2xl">
         <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} custom={0} variants={fadeUp} className="text-center mb-16">
           <p className="text-sm font-bold mb-3" style={{ color: "#3182F6" }}>자주 묻는 질문</p>
@@ -249,7 +251,8 @@ function Pricing() {
                   </li>
                 ))}
               </ul>
-              <button className="w-full py-3.5 rounded-xl text-sm font-bold transition-all hover:scale-[1.02] active:scale-[0.98]"
+              <button onClick={() => window.location.href = "/chat"}
+                className="w-full py-3.5 rounded-xl text-sm font-bold transition-all hover:scale-[1.02] active:scale-[0.98]"
                 style={{ backgroundColor: p.popular ? "#3182F6" : "#F2F4F6", color: p.popular ? "#FFFFFF" : "#4E5968" }}>
                 {p.cta}
               </button>
