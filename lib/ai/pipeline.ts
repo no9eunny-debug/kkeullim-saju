@@ -48,14 +48,31 @@ export async function runAnalysisPipeline(
 
   const userMessage = `${sajuText}${partnerText}\n\n위 사주 정보를 바탕으로 분석해주세요.`;
 
-  // 2. GPT + Gemini 병렬 호출
-  const [gptAnalysis, geminiAnalysis] = await Promise.all([
-    analyzeWithGPT(systemPrompt, userMessage, conversationHistory),
-    analyzeWithGemini(systemPrompt, userMessage, conversationHistory),
-  ]);
+  // 2. GPT + Gemini 병렬 호출 (Gemini 실패 시 GPT 단독으로 진행)
+  let gptAnalysis: string;
+  let geminiAnalysis: string;
+  try {
+    const results = await Promise.allSettled([
+      analyzeWithGPT(systemPrompt, userMessage, conversationHistory),
+      analyzeWithGemini(systemPrompt, userMessage, conversationHistory),
+    ]);
+    gptAnalysis = results[0].status === "fulfilled" ? results[0].value : "";
+    geminiAnalysis = results[1].status === "fulfilled" ? results[1].value : "";
 
-  // 3. GPT로 최종 종합 정리
-  const synthesisPrompt = `당신은 사주+MBTI 분석 전문가입니다. 아래 두 AI의 분석 결과를 종합하여 하나의 자연스러운 분석 결과로 정리해주세요.
+    if (!gptAnalysis && !geminiAnalysis) {
+      throw new Error("Both AI providers failed");
+    }
+  } catch (error) {
+    console.error("[pipeline] AI call error:", error);
+    throw error;
+  }
+
+  // 3. GPT로 최종 종합 정리 (한쪽만 성공한 경우에도 동작)
+  let finalResult: string;
+
+  if (gptAnalysis && geminiAnalysis) {
+    // 둘 다 성공 → 종합
+    const synthesisPrompt = `당신은 사주+MBTI 분석 전문가입니다. 아래 두 AI의 분석 결과를 종합하여 하나의 자연스러운 분석 결과로 정리해주세요.
 
 규칙:
 - 두 분석에서 공통되는 내용은 신뢰도 높은 정보로 강조
@@ -65,9 +82,13 @@ export async function runAnalysisPipeline(
 - 이모지 적절히 사용
 - ${input.depth === "summary" ? "3~5문장으로 핵심만 요약" : input.depth === "detailed" ? "공감→긍정→부정→해결→유의점→질문유도 순서로 상세하게" : "대운/세운/월운까지 포함하여 매우 상세하게. 구체적 시기와 맞춤 조언 포함"}`;
 
-  const synthesisMessage = `[분석 A]\n${gptAnalysis}\n\n[분석 B]\n${geminiAnalysis}\n\n위 두 분석을 종합하여 최종 결과를 작성해주세요.`;
-
-  const finalResult = await analyzeWithGPT(synthesisPrompt, synthesisMessage);
+    const synthesisMessage = `[분석 A]\n${gptAnalysis}\n\n[분석 B]\n${geminiAnalysis}\n\n위 두 분석을 종합하여 최종 결과를 작성해주세요.`;
+    finalResult = await analyzeWithGPT(synthesisPrompt, synthesisMessage);
+  } else {
+    // 한쪽만 성공 → 그 결과를 그대로 사용
+    finalResult = gptAnalysis || geminiAnalysis;
+    console.warn("[pipeline] Running with single AI result (one provider failed)");
+  }
 
   return {
     saju,
