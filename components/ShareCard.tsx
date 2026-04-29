@@ -108,7 +108,8 @@ export default function ShareCard({
       <div
         ref={cardRef}
         style={{
-          width: 360,
+          width: "100%",
+          maxWidth: 360,
           background: character.gradient,
           borderRadius: 20,
           padding: "32px 28px",

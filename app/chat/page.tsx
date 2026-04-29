@@ -977,15 +977,7 @@ function ChatPageInner() {
                         </div>
                       )}
 
-                      {/* 공유 카드 (첫 분석 결과) */}
-                      {isAssistant && isFirstAnalysis && sajuData && (
-                        <ShareCard
-                          mbti={mbti}
-                          ilju={sajuData.ilju}
-                          ohang={sajuData.ohang as any}
-                          category={category}
-                        />
-                      )}
+                      {/* 공유 카드는 메시지 루프 밖에서 렌더링 */}
 
                       {/* 공유 버튼 (AI 분석 결과) */}
                       {isAssistant && (
@@ -1017,6 +1009,18 @@ function ChatPageInner() {
                   </div>
                 );
               })}
+
+              {/* 공유 카드 (사주 데이터가 있고 분석 완료 후) */}
+              {!loading && sajuData && sajuData.ilju && messages.length > 0 && (
+                <div className="flex justify-center animate-[fadeInUp_0.5s_ease-out]">
+                  <ShareCard
+                    mbti={mbti}
+                    ilju={sajuData.ilju}
+                    ohang={sajuData.ohang as any}
+                    category={category}
+                  />
+                </div>
+              )}
 
               {/* 후속 질문 추천 칩 */}
               {!loading && messages.length > 0 && messages[messages.length - 1]?.role === "assistant" && (
