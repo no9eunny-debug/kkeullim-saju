@@ -182,6 +182,11 @@ export async function POST(req: Request) {
           tti: analysis.saju.tti,
           ohang: analysis.saju.ohangDistribution,
         },
+        partnerSaju: analysis.partnerSaju ? {
+          ilju: analysis.partnerSaju.ilju,
+          tti: analysis.partnerSaju.tti,
+          ohang: analysis.partnerSaju.ohangDistribution,
+        } : undefined,
         depth,
       });
     }

@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { Sparkles, Star, ChevronDown, Check, ArrowRight, Heart, Briefcase, Coins, Shield, UserCircle } from "lucide-react";
+import { Sparkles, Star, ChevronDown, Check, ArrowRight, Heart, Briefcase, Coins, Shield, UserCircle, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
 const fadeUp = {
@@ -445,13 +445,97 @@ function Footer() {
   );
 }
 
+/* ─────────── Season Banner (5월 가정의 달) ─────────── */
+function SeasonBanner() {
+  return (
+    <section className="px-5 -mt-8 mb-4 relative z-10">
+      <div className="mx-auto max-w-3xl">
+        <motion.div initial="hidden" animate="visible" custom={5} variants={fadeUp}
+          className="rounded-2xl p-6 sm:p-8 relative overflow-hidden"
+          style={{ background: "linear-gradient(135deg, #F8BBD0 0%, #CE93D8 50%, #B39DDB 100%)" }}>
+          <div className="relative z-10">
+            <p className="text-xs font-bold text-white/80 mb-2">5월 가정의 달 특별 운세</p>
+            <h3 className="text-lg sm:text-xl font-black text-white mb-3 leading-snug">
+              결혼운 &middot; 연애운<br className="sm:hidden" /> 분석해보세요
+            </h3>
+            <div className="flex flex-wrap gap-2">
+              <button onClick={() => window.location.href = "/chat?category=marriage"}
+                className="px-4 py-2 rounded-xl text-sm font-bold transition-all hover:scale-[1.02] active:scale-[0.98]"
+                style={{ backgroundColor: "rgba(255,255,255,0.9)", color: "#9C27B0" }}>
+                결혼운 보기
+              </button>
+              <button onClick={() => window.location.href = "/chat?category=love"}
+                className="px-4 py-2 rounded-xl text-sm font-bold transition-all hover:scale-[1.02] active:scale-[0.98]"
+                style={{ backgroundColor: "rgba(255,255,255,0.3)", color: "#FFFFFF" }}>
+                연애운 보기
+              </button>
+            </div>
+          </div>
+        </motion.div>
+      </div>
+    </section>
+  );
+}
+
+/* ─────────── Season Popup (하루 1회) ─────────── */
+function SeasonPopup() {
+  const [show, setShow] = useState(false);
+
+  useEffect(() => {
+    const today = new Date().toISOString().slice(0, 10);
+    if (localStorage.getItem("saju_popup_date") !== today) {
+      setShow(true);
+    }
+  }, []);
+
+  const close = () => {
+    localStorage.setItem("saju_popup_date", new Date().toISOString().slice(0, 10));
+    setShow(false);
+  };
+
+  if (!show) return null;
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-5"
+      style={{ backgroundColor: "rgba(0,0,0,0.5)" }}
+      onClick={close}>
+      <div className="relative w-full max-w-sm rounded-3xl p-8 text-center"
+        style={{ background: "linear-gradient(160deg, #FCE4EC 0%, #F3E5F5 50%, #EDE7F6 100%)" }}
+        onClick={e => e.stopPropagation()}>
+        <button onClick={close} className="absolute top-4 right-4 p-1 rounded-full transition-colors hover:bg-black/10">
+          <X className="w-5 h-5" style={{ color: "#6B7684" }} />
+        </button>
+        <p className="text-4xl mb-4">&#x1F338;</p>
+        <h3 className="text-xl font-black mb-2" style={{ color: "#191F28" }}>5월 한정!</h3>
+        <p className="text-sm mb-6 leading-relaxed" style={{ color: "#4E5968" }}>
+          가정의 달을 맞아<br />결혼운 &middot; 연애운 무료 분석
+        </p>
+        <div className="flex flex-col gap-2">
+          <button onClick={() => { close(); window.location.href = "/chat?category=marriage"; }}
+            className="w-full py-3.5 rounded-xl text-sm font-bold text-white transition-all hover:scale-[1.02]"
+            style={{ backgroundColor: "#9C27B0" }}>
+            결혼운 분석하기
+          </button>
+          <button onClick={() => { close(); window.location.href = "/chat?category=love"; }}
+            className="w-full py-3.5 rounded-xl text-sm font-bold transition-all hover:scale-[1.02]"
+            style={{ backgroundColor: "#F2F4F6", color: "#4E5968" }}>
+            연애운 분석하기
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ─────────── Main Page ─────────── */
 export default function Home() {
   return (
     <>
       <Header />
+      <SeasonPopup />
       <main>
         <Hero />
+        <SeasonBanner />
         <Empathy />
         <Reviews />
         <ResultPreview />

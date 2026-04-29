@@ -23,6 +23,13 @@ interface HistoryItem {
   mbti: string;
   birth_date: string;
   partner_mbti: string | null;
+  preview: string | null;
+  created_at: string;
+}
+
+interface ChatMessage {
+  role: "user" | "assistant";
+  content: string;
   created_at: string;
 }
 
@@ -50,10 +57,12 @@ const CATEGORY_EMOJI: Record<string, string> = {
   yearly: "📅",
   love: "💕",
   compatibility: "💑",
+  marriage: "💍",
   reunion: "🔄",
   wealth: "💰",
   career: "💼",
   health: "🏥",
+  "lucky-items": "✨",
 };
 
 export default function MyPage() {
@@ -66,6 +75,10 @@ export default function MyPage() {
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<"profiles" | "history">("profiles");
+  const [historyLimit, setHistoryLimit] = useState(5);
+  const [expandedSession, setExpandedSession] = useState<string | null>(null);
+  const [sessionMessages, setSessionMessages] = useState<Record<string, ChatMessage[]>>({});
+  const [loadingMessages, setLoadingMessages] = useState<string | null>(null);
 
   useEffect(() => {
     const init = async () => {
@@ -104,14 +117,16 @@ export default function MyPage() {
         daily_usage: profileData.daily_usage || 0,
       });
 
-      // 저장된 프로필
-      const profilesRes = await fetch(`/api/profiles?userId=${session.user.id}`);
-      const profilesList = await profilesRes.json();
+      // 저장된 프로필 + 분석 기록 병렬 조회
+      const [profilesRes, historyRes] = await Promise.all([
+        fetch(`/api/profiles?userId=${session.user.id}`),
+        fetch(`/api/history?userId=${session.user.id}`),
+      ]);
+      const [profilesList, historyList] = await Promise.all([
+        profilesRes.json(),
+        historyRes.json(),
+      ]);
       if (Array.isArray(profilesList)) setSavedProfiles(profilesList);
-
-      // 분석 기록
-      const historyRes = await fetch(`/api/history?userId=${session.user.id}`);
-      const historyList = await historyRes.json();
       if (Array.isArray(historyList)) setHistory(historyList);
 
       setLoading(false);
@@ -122,6 +137,25 @@ export default function MyPage() {
   const deleteProfile = async (id: string) => {
     await fetch(`/api/profiles?id=${id}`, { method: "DELETE" });
     setSavedProfiles(prev => prev.filter(p => p.id !== id));
+  };
+
+  const toggleSession = async (sessionId: string) => {
+    if (expandedSession === sessionId) {
+      setExpandedSession(null);
+      return;
+    }
+    setExpandedSession(sessionId);
+    if (!sessionMessages[sessionId]) {
+      setLoadingMessages(sessionId);
+      try {
+        const res = await fetch(`/api/history?userId=${userId}&sessionId=${sessionId}`);
+        const msgs = await res.json();
+        if (Array.isArray(msgs)) {
+          setSessionMessages(prev => ({ ...prev, [sessionId]: msgs }));
+        }
+      } catch { /* ignore */ }
+      setLoadingMessages(null);
+    }
   };
 
   const handleLogout = async () => {
@@ -296,26 +330,69 @@ export default function MyPage() {
                 </Link>
               </div>
             ) : (
-              history.map(item => (
-                <div key={item.id} className="p-4 rounded-2xl flex items-center gap-4"
-                  style={{ backgroundColor: "#FFFFFF", border: "1px solid #E5E8EB" }}>
-                  <div className="w-10 h-10 rounded-full flex items-center justify-center text-lg"
-                    style={{ backgroundColor: "#F8FAFB" }}>
-                    {CATEGORY_EMOJI[item.category] || "🔮"}
+              <>
+                {history.slice(0, historyLimit).map(item => (
+                  <div key={item.id} className="rounded-2xl overflow-hidden transition-all"
+                    style={{ backgroundColor: "#FFFFFF", border: expandedSession === item.id ? "2px solid #3182F6" : "1px solid #E5E8EB" }}>
+                    <button onClick={() => toggleSession(item.id)}
+                      className="w-full p-4 flex items-center gap-4 text-left">
+                      <div className="w-10 h-10 rounded-full flex items-center justify-center text-lg shrink-0"
+                        style={{ backgroundColor: "#F8FAFB" }}>
+                        {CATEGORY_EMOJI[item.category] || "🔮"}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-bold" style={{ color: "#191F28" }}>{item.category_label}</p>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <span className="text-xs" style={{ color: "#8B95A1" }}>{item.mbti}</span>
+                          {item.partner_mbti && (
+                            <span className="text-xs" style={{ color: "#8B95A1" }}>+ {item.partner_mbti}</span>
+                          )}
+                          <span className="text-xs" style={{ color: "#D1D6DB" }}>·</span>
+                          <span className="text-xs" style={{ color: "#8B95A1" }}>{formatDate(item.created_at)}</span>
+                        </div>
+                        {item.preview && expandedSession !== item.id && (
+                          <p className="text-xs mt-1.5 truncate" style={{ color: "#8B95A1" }}>{item.preview}</p>
+                        )}
+                      </div>
+                      <ChevronRight className="w-4 h-4 shrink-0 transition-transform" style={{
+                        color: "#D1D6DB",
+                        transform: expandedSession === item.id ? "rotate(90deg)" : "rotate(0deg)",
+                      }} />
+                    </button>
+                    {expandedSession === item.id && (
+                      <div className="px-4 pb-4 space-y-3" style={{ borderTop: "1px solid #F2F4F6" }}>
+                        {loadingMessages === item.id ? (
+                          <div className="flex items-center justify-center py-6">
+                            <div className="w-5 h-5 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: "#3182F6", borderTopColor: "transparent" }} />
+                          </div>
+                        ) : sessionMessages[item.id]?.length ? (
+                          sessionMessages[item.id].map((msg, i) => (
+                            <div key={i} className="pt-3">
+                              <div className="flex items-center gap-1.5 mb-1">
+                                <span className="text-[11px] font-bold" style={{ color: msg.role === "assistant" ? "#3182F6" : "#4E5968" }}>
+                                  {msg.role === "assistant" ? "AI 분석" : "질문"}
+                                </span>
+                              </div>
+                              <div className="text-xs leading-relaxed whitespace-pre-wrap" style={{ color: "#4E5968" }}>
+                                {msg.content}
+                              </div>
+                            </div>
+                          ))
+                        ) : (
+                          <p className="text-xs text-center py-4" style={{ color: "#8B95A1" }}>대화 내용을 불러올 수 없어요</p>
+                        )}
+                      </div>
+                    )}
                   </div>
-                  <div className="flex-1">
-                    <p className="text-sm font-bold" style={{ color: "#191F28" }}>{item.category_label}</p>
-                    <div className="flex items-center gap-2 mt-0.5">
-                      <span className="text-xs" style={{ color: "#8B95A1" }}>{item.mbti}</span>
-                      {item.partner_mbti && (
-                        <span className="text-xs" style={{ color: "#8B95A1" }}>+ {item.partner_mbti}</span>
-                      )}
-                      <span className="text-xs" style={{ color: "#D1D6DB" }}>·</span>
-                      <span className="text-xs" style={{ color: "#8B95A1" }}>{formatDate(item.created_at)}</span>
-                    </div>
-                  </div>
-                </div>
-              ))
+                ))}
+                {history.length > historyLimit && (
+                  <button onClick={() => setHistoryLimit(prev => prev + 5)}
+                    className="w-full py-3 rounded-2xl text-sm font-bold transition-all"
+                    style={{ backgroundColor: "#F2F4F6", color: "#6B7684" }}>
+                    더 보기 ({history.length - historyLimit}개 남음)
+                  </button>
+                )}
+              </>
             )}
           </div>
         )}

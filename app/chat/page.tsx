@@ -2,13 +2,14 @@
 
 import { useState, useRef, useEffect, useCallback, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import { Sparkles, Send, ArrowLeft, Link2, Check, ChevronRight, UserPlus, Save, X, User, UserCircle, Share2 } from "lucide-react";
+import { Sparkles, Send, ArrowLeft, Link2, Check, ChevronRight, UserPlus, Save, X, User, UserCircle, Share2, Crown } from "lucide-react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { LOADING_TIPS } from "@/lib/saju/loading-tips";
 import dynamic from "next/dynamic";
 
 const ShareCard = dynamic(() => import("@/components/ShareCard"), { ssr: false });
+const CoupleShareCard = dynamic(() => import("@/components/CoupleShareCard"), { ssr: false });
 
 interface SavedProfile {
   id: string;
@@ -406,11 +407,48 @@ function ChatPageInner() {
   const [copied, setCopied] = useState(false);
   const [analysisCount, setAnalysisCount] = useState(0);
   const [sajuData, setSajuData] = useState<{ ilju: string; ohang: Record<string, number> } | null>(null);
+  const [partnerSaju, setPartnerSaju] = useState<{ ilju: string; ohang: Record<string, number> } | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const tipInterval = useRef<NodeJS.Timeout | null>(null);
 
   const canProceed = mbti && birthDate && gender && nickname.trim();
+
+  // sessionStorage 복원 (뒤로가기 히스토리 보존)
+  const restoredRef = useRef(false);
+  useEffect(() => {
+    if (restoredRef.current) return;
+    restoredRef.current = true;
+    try {
+      const saved = sessionStorage.getItem("saju_chat_state");
+      if (!saved) return;
+      const s = JSON.parse(saved);
+      if (s.messages?.length > 0) setMessages(s.messages);
+      if (s.category) setCategory(s.category);
+      if (s.mbti) setMbti(s.mbti);
+      if (s.birthDate) setBirthDate(s.birthDate);
+      if (s.birthTime) setBirthTime(s.birthTime);
+      if (s.birthTimeUnknown) setBirthTimeUnknown(s.birthTimeUnknown);
+      if (s.gender) setGender(s.gender);
+      if (s.nickname) setNickname(s.nickname);
+      if (s.sajuData) setSajuData(s.sajuData);
+      if (s.partnerSaju) setPartnerSaju(s.partnerSaju);
+      if (s.sessionId) setSessionId(s.sessionId);
+      if (s.analysisCount) setAnalysisCount(s.analysisCount);
+      if (s.step === "chatting" || s.step === "category") setStep(s.step);
+    } catch {}
+  }, []);
+
+  // sessionStorage 저장 (상태 변경 시마다)
+  useEffect(() => {
+    if (!restoredRef.current) return;
+    try {
+      sessionStorage.setItem("saju_chat_state", JSON.stringify({
+        messages, category, mbti, birthDate, birthTime, birthTimeUnknown,
+        gender, nickname, sajuData, partnerSaju, step, sessionId, analysisCount,
+      }));
+    } catch {}
+  }, [messages, category, mbti, birthDate, birthTime, birthTimeUnknown, gender, nickname, sajuData, partnerSaju, step, sessionId, analysisCount]);
 
   // 닉네임 localStorage 저장/불러오기
   useEffect(() => {
@@ -573,6 +611,7 @@ function ChatPageInner() {
         setMessages(prev => [...prev, { role: "assistant", content: data.result }]);
         if (data.sessionId) setSessionId(data.sessionId);
         if (data.saju) setSajuData({ ilju: data.saju.ilju || "", ohang: data.saju.ohang || {} });
+        if (data.partnerSaju) setPartnerSaju({ ilju: data.partnerSaju.ilju || "", ohang: data.partnerSaju.ohang || {} });
         setAnalysisCount(prev => prev + 1);
       }
     } catch {
@@ -596,6 +635,8 @@ function ChatPageInner() {
   // 채팅 시작 (기존 메시지 유지하면서 새 분석 추가)
   const startChatting = (cat: string, partnerParams: Record<string, any> = {}) => {
     setStep("chatting");
+    // 비커플 카테고리면 partnerSaju 초기화
+    if (!PARTNER_CATEGORIES.includes(cat)) setPartnerSaju(null);
     // 이전 대화가 있으면 구분선 추가
     if (messages.length > 0) {
       const catLabel = CATEGORIES.find(c => c.key === cat)?.label || cat;
@@ -1061,7 +1102,7 @@ function ChatPageInner() {
                             나에게 맞는 행운 아이템
                           </p>
                           <div className="grid grid-cols-1 gap-2">
-                            {weakElements.flatMap(el => (LUCKY_ITEMS[el] || []).map(item => (
+                            {weakElements.flatMap(el => (LUCKY_ITEMS[el] || []).map(item => ({ el, item }))).slice(0, 3).map(({ el, item }) => (
                               <a key={`${el}-${item.name}`} href={item.url} target="_blank" rel="noopener noreferrer"
                                 className="flex items-center gap-3 p-3 rounded-xl transition-all hover:shadow-md hover:-translate-y-0.5"
                                 style={{ backgroundColor: "rgba(255,255,255,0.8)", border: "1px solid rgba(0,0,0,0.05)" }}>
@@ -1075,7 +1116,7 @@ function ChatPageInner() {
                                   {el}
                                 </span>
                               </a>
-                            )))}
+                            ))}
                           </div>
                           <p className="text-[10px] mt-3 leading-relaxed" style={{ color: "#8B95A1" }}>
                             이 링크는 쿠팡 파트너스 및 네이버 쇼핑 커넥트 활동의 일환으로, 이에 따른 소정의 수수료를 제공받습니다.
@@ -1119,12 +1160,50 @@ function ChatPageInner() {
               {/* 공유 카드 (사주 데이터가 있고 분석 완료 후) */}
               {!loading && sajuData && sajuData.ilju && messages.length > 0 && (
                 <div className="flex justify-center animate-[fadeInUp_0.5s_ease-out]">
-                  <ShareCard
-                    mbti={mbti}
-                    ilju={sajuData.ilju}
-                    ohang={sajuData.ohang as any}
-                    category={category}
-                  />
+                  {partnerSaju && partnerSaju.ilju ? (
+                    <CoupleShareCard
+                      myMbti={mbti}
+                      myIlju={sajuData.ilju}
+                      myOhang={sajuData.ohang as any}
+                      partnerMbti={partnerMbti || "????"}
+                      partnerIlju={partnerSaju.ilju}
+                      partnerOhang={partnerSaju.ohang as any}
+                      category={category}
+                    />
+                  ) : (
+                    <ShareCard
+                      mbti={mbti}
+                      ilju={sajuData.ilju}
+                      ohang={sajuData.ohang as any}
+                      category={category}
+                    />
+                  )}
+                </div>
+              )}
+
+              {/* 프리미엄 CTA 배너 */}
+              {!loading && messages.length > 0 && analysisCount > 0 && (
+                <div className="animate-[fadeInUp_0.6s_ease-out]">
+                  <button
+                    onClick={() => alert("준비 중이에요! 곧 더 상세한 분석을 만나보실 수 있어요")}
+                    className="w-full p-5 rounded-2xl text-left transition-all hover:scale-[1.01] hover:shadow-lg"
+                    style={{ background: "linear-gradient(135deg, #7C3AED 0%, #3B82F6 50%, #06B6D4 100%)" }}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: "rgba(255,255,255,0.2)" }}>
+                        <Crown className="w-5 h-5 text-white" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm font-bold text-white mb-1">이 사주, 더 깊이 파면 소름 돋는 부분이 있어요</p>
+                        <p className="text-xs font-medium" style={{ color: "rgba(255,255,255,0.7)" }}>10년 대운, 월별 운세, 숨은 재능까지</p>
+                      </div>
+                    </div>
+                    <div className="mt-3 flex justify-end">
+                      <span className="inline-flex items-center gap-1 px-4 py-2 rounded-xl text-sm font-bold" style={{ backgroundColor: "rgba(255,255,255,0.95)", color: "#7C3AED" }}>
+                        상세 분석 보기 <ChevronRight className="w-4 h-4" />
+                      </span>
+                    </div>
+                  </button>
                 </div>
               )}
 

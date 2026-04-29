@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Sparkles, ArrowLeft, ArrowRight, Sun, Moon, User, Share2, Compass } from "lucide-react";
+import { Sparkles, ArrowLeft, ArrowRight, Sun, Moon, User, Share2, Compass, Star as StarIcon } from "lucide-react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 
@@ -81,6 +81,23 @@ export default function DailyPage() {
   const [animated, setAnimated] = useState(false);
   const [savedProfiles, setSavedProfiles] = useState<SavedProfile[]>([]);
   const [activeProfileName, setActiveProfileName] = useState<string | null>(null);
+  const [luckyPoints, setLuckyPoints] = useState(0);
+  const [bonusEarned, setBonusEarned] = useState(false);
+
+  // 행운 포인트 로드
+  useEffect(() => {
+    try {
+      const today = new Date().toISOString().slice(0, 10);
+      const pts = parseInt(localStorage.getItem("saju_lucky_points") || "0", 10);
+      const ptsDate = localStorage.getItem("saju_lucky_points_date");
+      // 날짜 바뀌면 리셋
+      if (ptsDate !== today) {
+        setLuckyPoints(0);
+      } else {
+        setLuckyPoints(pts);
+      }
+    } catch {}
+  }, []);
 
   // 로그인 유저의 저장된 프로필 + 내 프로필 자동 적용
   useEffect(() => {
@@ -161,6 +178,26 @@ export default function DailyPage() {
         alert(data.error);
       } else {
         setResult(data);
+        // 행운 포인트 적립 (하루 1회)
+        try {
+          const today = new Date().toISOString().slice(0, 10);
+          const ptsDate = localStorage.getItem("saju_lucky_points_date");
+          if (ptsDate !== today) {
+            const prev = parseInt(localStorage.getItem("saju_lucky_points") || "0", 10);
+            const newPts = prev + 1;
+            localStorage.setItem("saju_lucky_points_date", today);
+            if (newPts >= 3) {
+              const bonus = parseInt(localStorage.getItem("saju_bonus_questions") || "0", 10);
+              localStorage.setItem("saju_bonus_questions", String(bonus + 1));
+              localStorage.setItem("saju_lucky_points", "0");
+              setLuckyPoints(0);
+              setBonusEarned(true);
+            } else {
+              localStorage.setItem("saju_lucky_points", String(newPts));
+              setLuckyPoints(newPts);
+            }
+          }
+        } catch {}
         // 캐시 저장 + 이전 캐시 정리
         try {
           localStorage.setItem(cacheKey, JSON.stringify(data));
@@ -223,13 +260,20 @@ export default function DailyPage() {
               <span className="font-bold" style={{ color: "#191F28" }}>오늘의 운세</span>
             </div>
           </div>
-          <Link
-            href="/chat"
-            className="text-sm font-medium px-4 py-2 rounded-xl transition-colors"
-            style={{ color: "#3182F6" }}
-          >
-            분석하기
-          </Link>
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-bold"
+              style={{ backgroundColor: "#FFF8E1", color: "#F59E0B", border: "1px solid #FDE68A" }}>
+              <StarIcon className="w-3.5 h-3.5 fill-yellow-400 text-yellow-400" />
+              {luckyPoints}/3
+            </div>
+            <Link
+              href="/chat"
+              className="text-sm font-medium px-4 py-2 rounded-xl transition-colors"
+              style={{ color: "#3182F6" }}
+            >
+              분석하기
+            </Link>
+          </div>
         </div>
       </header>
 
@@ -334,6 +378,20 @@ export default function DailyPage() {
         {/* ── 결과 ── */}
         {result && !loading && (
           <div className="space-y-6 pb-8">
+            {/* 질문권 획득 배너 */}
+            {bonusEarned && (
+              <div className="rounded-2xl p-5 text-center"
+                style={{ background: "linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%)", border: "1px solid #F59E0B" }}>
+                <p className="text-2xl mb-2">&#x1F389;</p>
+                <p className="text-sm font-black" style={{ color: "#92400E" }}>질문권 1회 획득!</p>
+                <p className="text-xs mt-1" style={{ color: "#A16207" }}>사주 분석에서 사용하세요</p>
+                <button onClick={() => setBonusEarned(false)}
+                  className="mt-3 text-xs font-medium px-4 py-1.5 rounded-full"
+                  style={{ backgroundColor: "rgba(146,64,14,0.1)", color: "#92400E" }}>
+                  확인
+                </button>
+              </div>
+            )}
             {/* 날짜 */}
             <div className="text-center pt-4" style={fade(0)}>
               <div className="inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium mb-2"
