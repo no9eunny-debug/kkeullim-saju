@@ -31,31 +31,22 @@ function LoginForm() {
   const [error, setError] = useState(urlError ? (ERROR_MESSAGES[urlError] || "로그인 오류가 발생했어요") : "");
   const [rememberMe, setRememberMe] = useState(false);
 
-  // 이미 로그인 상태면 채팅으로 이동 + 저장된 이메일로 자동 로그인
+  // 이미 로그인 상태면 채팅으로 이동 + 저장된 이메일 불러오기
   useEffect(() => {
     const init = async () => {
+      // 기존에 저장된 비밀번호 정리 (보안)
+      localStorage.removeItem("saju_saved_pw");
+
       const { data } = await supabase.auth.getSession();
       if (data.session) {
         router.replace("/chat");
         return;
       }
-      // 저장된 이메일/비밀번호 불러오기
+      // 저장된 이메일 불러오기
       const savedEmail = localStorage.getItem("saju_saved_email");
-      const savedPw = localStorage.getItem("saju_saved_pw");
       if (savedEmail) {
         setEmail(savedEmail);
         setRememberMe(true);
-        if (savedPw) {
-          setPassword(savedPw);
-          // 자동 로그인 시도
-          const { data: loginData, error: loginError } = await supabase.auth.signInWithPassword({
-            email: savedEmail, password: savedPw,
-          });
-          if (!loginError && loginData.session) {
-            window.location.href = "/chat";
-            return;
-          }
-        }
       }
     };
     init();
@@ -109,13 +100,11 @@ function LoginForm() {
       if (error) {
         setError("이메일 또는 비밀번호가 맞지 않아요");
       } else if (data.session) {
-        // 로그인 정보 저장/삭제
+        // 이메일 저장/삭제
         if (rememberMe) {
           localStorage.setItem("saju_saved_email", email);
-          localStorage.setItem("saju_saved_pw", password);
         } else {
           localStorage.removeItem("saju_saved_email");
-          localStorage.removeItem("saju_saved_pw");
         }
         window.location.href = "/chat";
         return;
@@ -224,7 +213,7 @@ function LoginForm() {
                 <label className="flex items-center gap-2 cursor-pointer select-none">
                   <input type="checkbox" checked={rememberMe} onChange={e => setRememberMe(e.target.checked)}
                     className="w-4 h-4 rounded accent-[#3182F6]" />
-                  <span className="text-xs" style={{ color: "#8B95A1" }}>아이디/비밀번호 기억하기</span>
+                  <span className="text-xs" style={{ color: "#8B95A1" }}>이메일 기억하기</span>
                 </label>
               )}
 

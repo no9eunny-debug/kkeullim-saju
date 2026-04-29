@@ -42,7 +42,8 @@ export async function POST(req: Request) {
         userId = user.id;
       }
     } catch {
-      // 세션 확인 실패 시 클라이언트 값 사용
+      // 세션 확인 실패 시 guest로 처리 (클라이언트 userId 무시)
+      userId = null;
     }
 
     // 사용량 체크
