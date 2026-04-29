@@ -203,11 +203,107 @@ function getWeakOhang(content: string): string[] {
   return weakOhang.slice(0, 2);
 }
 
-// 랜덤 3개 선택 (매번 다르게)
-function getFollowUpSuggestions(category: string): string[] {
-  const pool = FOLLOW_UP_POOL[category] || FOLLOW_UP_POOL.basic;
-  const shuffled = [...pool].sort(() => Math.random() - 0.5);
-  return shuffled.slice(0, 3);
+// 키워드 → 맥락 매칭용 태그
+const KEYWORD_TAGS: { keywords: string[]; questions: string[] }[] = [
+  { keywords: ["배우자", "결혼", "혼인", "웨딩"], questions: [
+    "배우자 성격이 더 구체적으로 궁금해요",
+    "결혼 생활에서 주의할 점이 있을까요?",
+    "결혼 적령기가 사주적으로 언제예요?",
+  ]},
+  { keywords: ["연애", "썸", "고백", "인연", "이성"], questions: [
+    "지금 만나는 사람이랑 잘 될 수 있을까요?",
+    "내가 연애할 때 반복하는 패턴이 있어요?",
+    "올해 새로운 인연이 들어오는 시기가 있어요?",
+  ]},
+  { keywords: ["궁합", "상대방", "두 사람", "합", "충"], questions: [
+    "우리 둘이 싸우면 어떤 패턴이에요?",
+    "이 사람이랑 장기적으로 갈 수 있을까요?",
+    "서로 맞추려면 뭘 조심해야 해요?",
+  ]},
+  { keywords: ["재물", "돈", "투자", "사업", "수입"], questions: [
+    "올해 재물운 좋은 달이 언제예요?",
+    "사주적으로 나한테 맞는 재테크 방법은?",
+    "부업이나 투잡에 맞는 분야가 있을까요?",
+  ]},
+  { keywords: ["직업", "이직", "적성", "커리어", "회사"], questions: [
+    "올해 이직하기 좋은 타이밍이 있어요?",
+    "나한테 맞는 업무 스타일은 뭐예요?",
+    "사주로 본 리더십 유형이 궁금해요",
+  ]},
+  { keywords: ["건강", "체질", "스트레스", "컨디션"], questions: [
+    "계절별로 특히 주의할 시기가 있어요?",
+    "내 MBTI가 스트레스에 어떤 영향을 줘요?",
+    "사주 체질에 맞는 음식이 있어요?",
+  ]},
+  { keywords: ["시기", "운세", "흐름", "대운", "세운", "올해", "내년"], questions: [
+    "올해 하반기 운세가 궁금해요",
+    "나한테 인생 전환점이 오는 시기가 있어요?",
+    "올해 가장 조심해야 할 달은 언제예요?",
+  ]},
+  { keywords: ["MBTI", "성격", "유형"], questions: [
+    "내 MBTI랑 사주가 충돌하는 부분이 있어?",
+    "사주적으로 나한테 딱 맞는 MBTI 유형은?",
+    "내 성격의 숨은 면이 사주에서 보여요?",
+  ]},
+  { keywords: ["도화살", "매력", "외모", "인기"], questions: [
+    "내 매력 포인트가 사주에서 어떻게 나와요?",
+    "도화살이 활성화되는 시기가 있어요?",
+    "이성에게 어필되는 내 포인트는?",
+  ]},
+  { keywords: ["재회", "헤어", "이별", "전 남자", "전 여자", "전남친", "전여친"], questions: [
+    "재회하면 패턴이 달라질 수 있어요?",
+    "새로운 인연이 더 나을까요?",
+    "이별 후 회복 시기가 궁금해요",
+  ]},
+];
+
+// 다른 카테고리 전환 유도 질문
+const CROSS_CATEGORY: Record<string, string[]> = {
+  basic: ["올해 운세도 궁금해요", "연애운이 궁금해요", "재물운을 봐주세요"],
+  yearly: ["연애운을 더 깊이 봐주세요", "재물운이 특히 궁금해요", "건강 쪽도 알려주세요"],
+  love: ["결혼운도 궁금해요", "올해 전체 운세는 어때요?", "재물운도 봐주세요"],
+  marriage: ["연애 성향 자체도 분석해주세요", "올해 운세 흐름이 궁금해요", "재물운은 어때요?"],
+  reunion: ["새 연애운이 궁금해요", "올해 운세 전체가 궁금해요", "직업운은 어때요?"],
+  wealth: ["직업 적성도 궁금해요", "올해 운세 전체를 봐주세요", "연애운은 어때요?"],
+  career: ["재물운도 같이 알려주세요", "올해 운세가 궁금해요", "건강 관리도 봐주세요"],
+  health: ["올해 전체 운세가 궁금해요", "직업 적성도 알려주세요", "재물운은 어때요?"],
+  "lucky-items": ["올해 운세가 궁금해요", "연애운을 봐주세요", "재물운을 봐주세요"],
+};
+
+// 맥락 기반 후속 질문 (AI 답변 분석 + 이미 한 질문 제외)
+function getFollowUpSuggestions(category: string, lastAssistantMsg?: string, askedQuestions?: string[]): string[] {
+  const asked = new Set(askedQuestions || []);
+  const result: string[] = [];
+
+  // 1. AI 답변에서 키워드 매칭 → 맥락 관련 질문 (최대 2개)
+  if (lastAssistantMsg) {
+    const contextQuestions: string[] = [];
+    for (const tag of KEYWORD_TAGS) {
+      if (tag.keywords.some(kw => lastAssistantMsg.includes(kw))) {
+        contextQuestions.push(...tag.questions);
+      }
+    }
+    const filtered = contextQuestions.filter(q => !asked.has(q));
+    const shuffled = [...new Set(filtered)].sort(() => Math.random() - 0.5);
+    result.push(...shuffled.slice(0, 2));
+  }
+
+  // 2. 부족하면 카테고리 풀에서 보충
+  if (result.length < 2) {
+    const pool = FOLLOW_UP_POOL[category] || FOLLOW_UP_POOL.basic;
+    const remaining = pool.filter(q => !asked.has(q) && !result.includes(q));
+    const shuffled = remaining.sort(() => Math.random() - 0.5);
+    result.push(...shuffled.slice(0, 2 - result.length));
+  }
+
+  // 3. 마지막 1개는 다른 카테고리 전환 유도
+  const cross = CROSS_CATEGORY[category] || CROSS_CATEGORY.basic;
+  const crossFiltered = cross.filter(q => !asked.has(q) && !result.includes(q));
+  if (crossFiltered.length > 0) {
+    result.push(crossFiltered[Math.floor(Math.random() * crossFiltered.length)]);
+  }
+
+  return result.slice(0, 3);
 }
 
 type Step = "input" | "category" | "partner-input" | "chatting";
@@ -1032,7 +1128,11 @@ function ChatPageInner() {
                 <div className="space-y-3 pt-4 animate-[fadeInUp_0.5s_ease-out]">
                   <p className="text-sm font-bold" style={{ color: "#3182F6" }}>💬 이런 것도 물어보세요</p>
                   <div className="flex flex-col gap-2">
-                    {getFollowUpSuggestions(category).map((suggestion, i) => (
+                    {getFollowUpSuggestions(
+                      category,
+                      messages[messages.length - 1]?.content,
+                      messages.filter(m => m.role === "user").map(m => m.content),
+                    ).map((suggestion, i) => (
                       <button key={i} onClick={() => handleSend(suggestion)}
                         className="flex items-center justify-between w-full px-5 py-3.5 rounded-2xl text-sm font-medium transition-all hover:scale-[1.01] hover:shadow-md"
                         style={{ backgroundColor: "#FFFFFF", border: "1px solid #E5E8EB", color: "#191F28", animationDelay: `${i * 100}ms` }}>
