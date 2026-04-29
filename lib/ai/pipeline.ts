@@ -64,7 +64,7 @@ export async function runAnalysisPipeline(
   // 궁합/연애운/재회운: 상대방 사주도 계산
   let partnerSaju: SajuResult | undefined;
   let partnerText = "";
-  const partnerCategories = ["compatibility", "love", "reunion"];
+  const partnerCategories = ["love", "marriage", "reunion"];
   if (partnerCategories.includes(input.category) && input.partnerBirthDate) {
     partnerSaju = calculateSaju(
       input.partnerBirthDate,
@@ -72,12 +72,31 @@ export async function runAnalysisPipeline(
       input.partnerGender || "unknown"
     );
     partnerText = `\n\n[상대방 사주 정보]\n${sajuToPromptText(partnerSaju, input.partnerMbti || "모름")}`;
-    partnerText += `\n\n## 중요: 상대방 정보가 제공되었습니다!
+
+    if (input.category === "marriage") {
+      partnerText += `\n\n## 중요: 상대방 정보가 제공되었습니다!
+이 상대방과의 결혼 궁합을 중심으로 분석해주세요.
+두 사람의 배우자궁(일지) 호환성, 관성 관계, 결혼 후 생활 패턴을 비교 분석해주세요.
+결혼 시기적으로 두 사람에게 좋은 타이밍인지도 알려주세요.
+- 두 사람의 일간 오행 관계 (상생/상극)
+- 두 사람 사이의 합/충 관계
+- 두 MBTI 유형의 궁합과 사주적 궁합 비교
+- 이 조합의 장점과 주의할 점을 구체적으로`;
+    } else if (input.category === "love") {
+      partnerText += `\n\n## 중요: 상대방 정보가 제공되었습니다!
 반드시 두 사람의 사주를 비교 분석해주세요.
 - 두 사람의 일간 오행 관계 (상생/상극)
 - 두 사람 사이의 합/충 관계
 - 두 MBTI 유형의 궁합과 사주적 궁합 비교
 - 이 조합의 장점과 주의할 점을 구체적으로`;
+    } else if (input.category === "reunion") {
+      partnerText += `\n\n## 중요: 상대방 정보가 제공되었습니다!
+이 상대방과의 재회 가능성과 궁합을 함께 분석해주세요.
+- 두 사람의 일간 오행 관계 (상생/상극)
+- 두 사람 사이의 합/충 관계
+- 두 MBTI 유형의 궁합과 사주적 궁합 비교
+- 이 조합의 장점과 주의할 점을 구체적으로`;
+    }
   }
 
   const userMessage = `${sajuText}${partnerText}\n\n위 사주 정보를 바탕으로 분석해주세요.`;

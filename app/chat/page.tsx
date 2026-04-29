@@ -26,8 +26,8 @@ const MBTI_TYPES = [
 const CATEGORIES = [
   { key: "basic", label: "기본 사주풀이", emoji: "🔮" },
   { key: "yearly", label: "올해 운세", emoji: "📅" },
-  { key: "love", label: "연애운", emoji: "💕" },
-  { key: "compatibility", label: "궁합", emoji: "💑" },
+  { key: "love", label: "연애·궁합", emoji: "💕" },
+  { key: "marriage", label: "결혼운", emoji: "💍" },
   { key: "reunion", label: "재회운", emoji: "🔄" },
   { key: "wealth", label: "재물운", emoji: "💰" },
   { key: "career", label: "직업·적성", emoji: "💼" },
@@ -35,7 +35,7 @@ const CATEGORIES = [
 ];
 
 // 상대방 정보가 필요할 수 있는 카테고리
-const PARTNER_CATEGORIES = ["love", "compatibility", "reunion"];
+const PARTNER_CATEGORIES = ["love", "marriage", "reunion"];
 
 // MBTI별 추가 팁 (LOADING_TIPS와 합쳐서 사용)
 const MBTI_TIPS: Record<string, string[]> = {
@@ -91,14 +91,19 @@ const FOLLOW_UP_POOL: Record<string, string[]> = {
     "연애할 때 내가 조심해야 할 패턴이 뭐예요?",
     "재회 가능성도 볼 수 있어요?",
     "사주적으로 내가 끌리는 유형이 있어요?",
+    "우리 둘의 사주 궁합이 궁금해요",
+    "이 사람이랑 오래갈 수 있을까요?",
+    "상대방 사주도 같이 봐주세요",
   ],
-  compatibility: [
-    "우리 MBTI 궁합도 같이 분석해주세요",
-    "이 사람이랑 연애할 때 주의할 점은?",
-    "내 연애 패턴 자체를 더 깊이 보고 싶어요",
-    "올해 우리 관계에 변화가 있을까요?",
-    "이 사람 말고 나한테 맞는 유형이 궁금해요",
-    "재물운은 어때요?",
+  marriage: [
+    "결혼 시기가 궁금해요",
+    "미래 배우자는 어떤 사람일까요?",
+    "결혼 후 생활이 어떨지 궁금해요",
+    "배우자 MBTI는 뭐가 잘 맞을까요?",
+    "결혼운이 들어오는 시기가 있나요?",
+    "사주로 본 배우자 직업/외모가 궁금해요",
+    "결혼 준비할 때 좋은 시기가 있을까요?",
+    "이 사람이랑 결혼하면 어떨까요?",
   ],
   reunion: [
     "내 연애 성향 자체를 먼저 분석해주세요",
@@ -721,7 +726,7 @@ export default function ChatPage() {
           </div>
         )}
 
-        {/* Step 2.5: 상대방 정보 (연애운/궁합/재회운) */}
+        {/* Step 2.5: 상대방 정보 (연애·궁합/결혼운/재회운) */}
         {step === "partner-input" && (
           <div className="space-y-6">
             <div className="text-center">
@@ -729,12 +734,12 @@ export default function ChatPage() {
                 {CATEGORIES.find(c => c.key === category)?.emoji} {CATEGORIES.find(c => c.key === category)?.label}
               </h1>
               <p className="text-sm" style={{ color: "#8B95A1" }}>
-                {category === "compatibility" ? "상대방 정보를 입력해주세요" : "상대방 정보를 추가하면 더 정확한 분석이 가능해요"}
+                상대방 정보를 추가하면 더 정확한 분석이 가능해요
               </p>
             </div>
 
-            {/* 상대방 정보 입력 여부 선택 (궁합은 무조건 입력) */}
-            {category !== "compatibility" && (
+            {/* 상대방 정보 입력 여부 선택 */}
+            {(
               <div className="grid grid-cols-2 gap-3">
                 <button onClick={() => setWantPartner(false)}
                   className="p-4 rounded-2xl text-center transition-all"
@@ -755,7 +760,7 @@ export default function ChatPage() {
             )}
 
             {/* 상대방 입력 폼 */}
-            {(wantPartner || category === "compatibility") && (
+            {wantPartner && (
               <div className="space-y-5 p-5 rounded-2xl" style={{ backgroundColor: "#FFFFFF", border: "1px solid #E5E8EB" }}>
                 <h3 className="text-sm font-bold" style={{ color: "#191F28" }}>상대방 정보</h3>
 
@@ -791,7 +796,7 @@ export default function ChatPage() {
                 </div>
                 {/* Partner Birth */}
                 <div>
-                  <label className="text-xs font-medium mb-2 block" style={{ color: "#6B7684" }}>생년월일 {category === "compatibility" ? "(필수)" : "(선택)"}</label>
+                  <label className="text-xs font-medium mb-2 block" style={{ color: "#6B7684" }}>생년월일 (선택)</label>
                   <input type="date" value={partnerBirthDate} onChange={e => setPartnerBirthDate(e.target.value)} className="w-full px-4 py-3 rounded-xl text-sm outline-none"
                     style={{ backgroundColor: "#F8FAFB", border: "1px solid #E5E8EB", color: "#191F28" }} />
                 </div>
@@ -825,7 +830,7 @@ export default function ChatPage() {
             <div className="flex gap-3">
               <button onClick={() => setStep("category")} className="flex-1 py-4 rounded-2xl text-base font-bold transition-all" style={{ backgroundColor: "#F2F4F6", color: "#4E5968" }}>뒤로</button>
               <button onClick={handleStartWithPartner}
-                disabled={category === "compatibility" && !partnerBirthDate}
+                disabled={false}
                 className="flex-1 py-4 rounded-2xl text-base font-bold text-white transition-all hover:scale-[1.01] disabled:opacity-40" style={{ backgroundColor: "#3182F6" }}>
                 분석 시작
               </button>
