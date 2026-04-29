@@ -195,6 +195,13 @@ const COLORS: Record<string, { name: string; hex: string }[]> = {
 };
 const NUMBERS: Record<string, number[]> = { 목: [3, 8], 화: [2, 7], 토: [5, 10], 금: [4, 9], 수: [1, 6] };
 const DIRECTION: Record<string, string> = { 목: "동쪽", 화: "남쪽", 토: "중앙", 금: "서쪽", 수: "북쪽" };
+const LUCKY_ITEMS: Record<string, string[]> = {
+  목: ["미니 화분", "녹색 손수건", "나무 액세서리", "허브 티"],
+  화: ["캔들", "빨간 립밤", "향초", "레드 머그컵"],
+  토: ["도자기 소품", "노란 메모지", "크리스탈 볼", "베이지 파우치"],
+  금: ["실버 반지", "흰색 스카프", "메탈 볼펜", "진주 귀걸이"],
+  수: ["수정 브레이슬릿", "파란 텀블러", "미니 분수", "네이비 손수건"],
+};
 
 // ── MBTI 보정 ──
 function mbtiBonus(mbti: string | null, todayEl: string): number {
@@ -316,6 +323,8 @@ export async function POST(req: Request) {
     const nums = NUMBERS[yongEl] || [5, 10];
     const luckyNumber = nums[day % nums.length];
     const luckyDirection = DIRECTION[yongEl] || "중앙";
+    const items = LUCKY_ITEMS[yongEl] || LUCKY_ITEMS["토"];
+    const luckyItem = items[day % items.length];
 
     // ── 미니 운세 ──
     const mini = SIPSUNG_MINI[todaySipsung] || SIPSUNG_MINI["비견"];
@@ -348,6 +357,7 @@ export async function POST(req: Request) {
       luckyColor,
       luckyNumber,
       luckyDirection,
+      luckyItem,
       dominantElement: dominant,
       todayElement: tEl,
       ilju: userSaju.ilju,

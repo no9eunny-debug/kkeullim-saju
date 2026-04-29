@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Sparkles, Send, ArrowLeft, Link2, Check, ChevronRight, UserPlus, Save, X, User, UserCircle } from "lucide-react";
+import { Sparkles, Send, ArrowLeft, Link2, Check, ChevronRight, UserPlus, Save, X, User, UserCircle, Share2 } from "lucide-react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { LOADING_TIPS } from "@/lib/saju/loading-tips";
@@ -32,6 +32,7 @@ const CATEGORIES = [
   { key: "wealth", label: "재물운", emoji: "💰" },
   { key: "career", label: "직업·적성", emoji: "💼" },
   { key: "health", label: "건강운", emoji: "🏥" },
+  { key: "lucky-items", label: "행운 아이템", emoji: "✨" },
 ];
 
 // 상대방 정보가 필요할 수 있는 카테고리
@@ -140,7 +141,58 @@ const FOLLOW_UP_POOL: Record<string, string[]> = {
     "재물운도 궁금해요",
     "계절별로 특히 주의할 때가 있어요?",
   ],
+  "lucky-items": [
+    "올해 행운의 색상이 뭔지 알려주세요",
+    "나한테 맞는 행운 액세서리 추천해주세요",
+    "오행에 맞는 향수나 차 추천 있을까요?",
+    "올해 피해야 할 색상이나 방위가 있나요?",
+    "행운의 숫자가 궁금해요",
+    "집 인테리어에 좋은 오행 아이템은?",
+    "MBTI랑 사주에 맞는 패션 스타일은?",
+    "올해 선물 받으면 좋은 아이템은?",
+  ],
 };
+
+const LUCKY_ITEMS: Record<string, { name: string; desc: string; emoji: string; url: string }[]> = {
+  목: [
+    { name: "그린 원석 팔찌", desc: "목 기운 보충 행운 액세서리", emoji: "🌿", url: "#" },
+    { name: "미니 화분", desc: "책상 위 목 기운 충전", emoji: "🪴", url: "#" },
+  ],
+  화: [
+    { name: "레드 캔들", desc: "화 기운 보충 아로마 캔들", emoji: "🕯️", url: "#" },
+    { name: "로즈 향수", desc: "따뜻한 화 기운의 향기", emoji: "🌹", url: "#" },
+  ],
+  토: [
+    { name: "도자기 머그컵", desc: "토 기운을 담은 그릇", emoji: "🍵", url: "#" },
+    { name: "천연 코튼 파우치", desc: "자연 소재 토 기운 아이템", emoji: "👜", url: "#" },
+  ],
+  금: [
+    { name: "실버 미니멀 반지", desc: "금 기운 보충 액세서리", emoji: "💍", url: "#" },
+    { name: "스테인리스 텀블러", desc: "금속 소재 금 기운 아이템", emoji: "🥤", url: "#" },
+  ],
+  수: [
+    { name: "블루 수정 팔찌", desc: "수 기운 보충 행운 아이템", emoji: "💎", url: "#" },
+    { name: "아쿠아 디퓨저", desc: "수 기운의 시원한 향기", emoji: "💧", url: "#" },
+  ],
+};
+
+// 부족한 오행 찾기 (ohang 텍스트에서 파싱)
+function getWeakOhang(content: string): string[] {
+  const ohangKeys = ["목", "화", "토", "금", "수"];
+  // AI 응답에서 오행 분포를 파싱하거나, 부족한 오행 키워드를 탐색
+  const weakOhang: string[] = [];
+  for (const key of ohangKeys) {
+    if (content.includes(`${key}(`) || content.includes(`${key} 기운`) || content.includes(`${key}이 부족`) || content.includes(`${key}가 부족`) || content.includes(`${key} 부족`)) {
+      weakOhang.push(key);
+    }
+  }
+  // 부족 키워드가 없으면 랜덤 2개 추천
+  if (weakOhang.length === 0) {
+    const shuffled = [...ohangKeys].sort(() => Math.random() - 0.5);
+    return shuffled.slice(0, 2);
+  }
+  return weakOhang.slice(0, 2);
+}
 
 // 랜덤 3개 선택 (매번 다르게)
 function getFollowUpSuggestions(category: string): string[] {
@@ -855,20 +907,85 @@ export default function ChatPage() {
                   );
                 }
 
+                const isAssistant = msg.role === "assistant";
+                // 첫 분석 결과인지 확인 (이전 메시지가 system이거나 첫 메시지)
+                const isFirstAnalysis = isAssistant && (i === 0 || messages[i - 1]?.role === "system");
+                const weakElements = isAssistant ? getWeakOhang(msg.content) : [];
+
                 return (
                   <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"} animate-[fadeInUp_0.4s_ease-out]`}>
-                    <div className={`rounded-2xl px-5 py-4 text-sm ${msg.role === "user" ? "max-w-[75%]" : "max-w-[90%]"}`}
-                      style={{
-                        backgroundColor: msg.role === "user" ? "#3182F6" : "#FFFFFF",
-                        color: msg.role === "user" ? "#FFFFFF" : "#333D4B",
-                        border: msg.role === "assistant" ? "1px solid #E5E8EB" : "none",
-                        lineHeight: "1.8",
-                        boxShadow: msg.role === "assistant" ? "0 2px 8px rgba(0,0,0,0.04)" : "none",
-                      }}>
-                      {msg.role === "assistant" ? (
-                        <MessageContent content={msg.content} />
-                      ) : (
-                        msg.content
+                    <div className={`${msg.role === "user" ? "max-w-[75%]" : "max-w-[90%]"}`}>
+                      <div className={`rounded-2xl px-5 py-4 text-sm`}
+                        style={{
+                          backgroundColor: msg.role === "user" ? "#3182F6" : "#FFFFFF",
+                          color: msg.role === "user" ? "#FFFFFF" : "#333D4B",
+                          border: isAssistant ? "1px solid #E5E8EB" : "none",
+                          lineHeight: "1.8",
+                          boxShadow: isAssistant ? "0 2px 8px rgba(0,0,0,0.04)" : "none",
+                        }}>
+                        {isAssistant ? (
+                          <MessageContent content={msg.content} />
+                        ) : (
+                          msg.content
+                        )}
+                      </div>
+
+                      {/* 행운 아이템 추천 섹션 (AI 분석 결과 하단) */}
+                      {isAssistant && isFirstAnalysis && weakElements.length > 0 && (
+                        <div className="mt-3 rounded-2xl p-5 text-sm"
+                          style={{ background: "linear-gradient(135deg, #FFF8E1 0%, #FFF3E0 50%, #FCE4EC 100%)", border: "1px solid #FFE082" }}>
+                          <p className="font-black text-base mb-3" style={{ color: "#191F28" }}>
+                            <Sparkles className="w-4 h-4 inline-block mr-1" style={{ color: "#F59E0B" }} />
+                            나에게 맞는 행운 아이템
+                          </p>
+                          <div className="grid grid-cols-1 gap-2">
+                            {weakElements.flatMap(el => (LUCKY_ITEMS[el] || []).map(item => (
+                              <a key={`${el}-${item.name}`} href={item.url} target="_blank" rel="noopener noreferrer"
+                                className="flex items-center gap-3 p-3 rounded-xl transition-all hover:shadow-md hover:-translate-y-0.5"
+                                style={{ backgroundColor: "rgba(255,255,255,0.8)", border: "1px solid rgba(0,0,0,0.05)" }}>
+                                <span className="text-2xl">{item.emoji}</span>
+                                <div className="flex-1 min-w-0">
+                                  <p className="font-bold text-sm" style={{ color: "#191F28" }}>{item.name}</p>
+                                  <p className="text-xs" style={{ color: "#6B7684" }}>{item.desc}</p>
+                                </div>
+                                <span className="text-xs font-medium shrink-0 px-2 py-1 rounded-lg"
+                                  style={{ backgroundColor: "#FFF8E1", color: "#F59E0B" }}>
+                                  {el}
+                                </span>
+                              </a>
+                            )))}
+                          </div>
+                          <p className="text-[10px] mt-3 leading-relaxed" style={{ color: "#8B95A1" }}>
+                            이 링크는 쿠팡 파트너스 및 네이버 쇼핑 커넥트 활동의 일환으로, 이에 따른 소정의 수수료를 제공받습니다.
+                          </p>
+                        </div>
+                      )}
+
+                      {/* 공유 버튼 (AI 분석 결과) */}
+                      {isAssistant && (
+                        <div className="flex justify-end mt-1.5">
+                          <button
+                            onClick={async () => {
+                              const shareData = {
+                                title: "합리적 미신",
+                                text: "[합리적 미신] MBTI + 사주 분석 결과! 나도 해보기 →",
+                                url: "https://kkeullim-saju.vercel.app",
+                              };
+                              try {
+                                if (navigator.share) {
+                                  await navigator.share(shareData);
+                                } else {
+                                  await navigator.clipboard.writeText(`${shareData.text} ${shareData.url}`);
+                                  alert("링크가 복사되었어요!");
+                                }
+                              } catch {}
+                            }}
+                            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs transition-all hover:bg-gray-100"
+                            style={{ color: "#8B95A1" }}>
+                            <Share2 className="w-3.5 h-3.5" />
+                            공유
+                          </button>
+                        </div>
                       )}
                     </div>
                   </div>
