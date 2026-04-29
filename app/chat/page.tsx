@@ -62,17 +62,87 @@ function getLoadingTips(mbti: string): string[] {
   return [...mbtiTips, ...LOADING_TIPS];
 }
 
-// 후속 질문 추천
-const FOLLOW_UP_SUGGESTIONS: Record<string, string[]> = {
-  basic: ["올해 운세도 궁금해요", "연애운은 어때요?", "적성에 맞는 직업은?"],
-  yearly: ["연애운 더 자세히 보고 싶어요", "재물운은 어때요?", "건강 주의할 점은?"],
-  love: ["궁합도 볼 수 있어요?", "올해 좋은 인연이 올까요?", "이상형은 어떤 사람이에요?"],
-  compatibility: ["연애 패턴을 더 알고 싶어요", "올해 운세도 궁금해요", "재물운은 어때요?"],
-  reunion: ["새로운 인연은 언제 올까요?", "연애 패턴을 분석해주세요", "올해 전체 운세가 궁금해요"],
-  wealth: ["적성에 맞는 직업이 궁금해요", "올해 운세도 알려주세요", "투자 시기는 언제가 좋을까요?"],
-  career: ["재물운도 같이 볼래요", "올해 이직 운은?", "건강 관리 방향이 궁금해요"],
-  health: ["올해 전체 운세가 궁금해요", "재물운을 봐주세요", "연애운은 어때요?"],
+// 후속 질문 풀 (카테고리별 6개 이상 → 랜덤 3개 표시)
+const FOLLOW_UP_POOL: Record<string, string[]> = {
+  basic: [
+    "내 MBTI랑 사주가 충돌하는 부분이 있어?",
+    "올해 운세는 어떤 흐름이에요?",
+    "연애할 때 내 패턴이 궁금해요",
+    "나한테 맞는 직업군은 뭐가 있어요?",
+    "재물운 쪽으로 특이한 점 있어요?",
+    "내 MBTI가 사주적으로 어떤 의미예요?",
+    "건강 쪽으로 조심할 게 있어요?",
+    "나랑 잘 맞는 MBTI가 궁금해요",
+  ],
+  yearly: [
+    "올해 연애운은 어떤 흐름이에요?",
+    "올해 재물운이 특히 궁금해요",
+    "내 MBTI가 올해 어떤 영향을 받아요?",
+    "올해 건강 쪽 주의할 시기가 있어요?",
+    "하반기에 특히 좋은 달이 있어요?",
+    "올해 직업/이직 운은 어때요?",
+    "올해 나한테 맞는 MBTI 궁합이 달라져요?",
+  ],
+  love: [
+    "마음에 두고 있는 사람이랑 궁합 볼 수 있어요?",
+    "내 MBTI가 연애에서 어떻게 작용해요?",
+    "올해 좋은 인연이 오는 시기가 있어요?",
+    "나한테 딱 맞는 이상형의 MBTI는?",
+    "연애할 때 내가 조심해야 할 패턴이 뭐예요?",
+    "재회 가능성도 볼 수 있어요?",
+    "사주적으로 내가 끌리는 유형이 있어요?",
+  ],
+  compatibility: [
+    "우리 MBTI 궁합도 같이 분석해주세요",
+    "이 사람이랑 연애할 때 주의할 점은?",
+    "내 연애 패턴 자체를 더 깊이 보고 싶어요",
+    "올해 우리 관계에 변화가 있을까요?",
+    "이 사람 말고 나한테 맞는 유형이 궁금해요",
+    "재물운은 어때요?",
+  ],
+  reunion: [
+    "내 연애 성향 자체를 먼저 분석해주세요",
+    "새로운 인연이 오는 시기가 궁금해요",
+    "MBTI로 봤을 때 재회 후 패턴이 궁금해요",
+    "올해 전체 운세가 궁금해요",
+    "직업운에서 새 인연이 올 수도 있어요?",
+    "나한테 진짜 맞는 MBTI 유형은?",
+  ],
+  wealth: [
+    "어떤 직업이 나한테 맞아요?",
+    "내 MBTI가 돈 쓰는 패턴에 영향을 줘요?",
+    "올해 재물운 좋은 시기가 언제예요?",
+    "사업 vs 직장, 사주적으로 뭐가 맞아요?",
+    "올해 전체 운세도 보고 싶어요",
+    "연애운은 어때요?",
+    "투자 성향이 MBTI랑 사주에서 어떻게 보여요?",
+  ],
+  career: [
+    "재물운이랑 같이 보면 어때요?",
+    "내 MBTI 직업 유형이랑 사주가 일치해요?",
+    "올해 이직/전직 타이밍이 있어요?",
+    "건강 관리가 일에 어떤 영향을 줘요?",
+    "부업이나 사이드잡에 맞는 분야는?",
+    "올해 운세 전체 흐름이 궁금해요",
+    "나한테 맞는 리더십 스타일이 뭐예요?",
+  ],
+  health: [
+    "기본 사주에서 체질을 더 깊이 보고 싶어요",
+    "내 MBTI가 스트레스에 어떻게 반응해요?",
+    "올해 운세랑 건강이 어떻게 연결돼요?",
+    "직업 적성이랑 건강 밸런스가 궁금해요",
+    "연애 스트레스가 건강에 영향 주나요?",
+    "재물운도 궁금해요",
+    "계절별로 특히 주의할 때가 있어요?",
+  ],
 };
+
+// 랜덤 3개 선택 (매번 다르게)
+function getFollowUpSuggestions(category: string): string[] {
+  const pool = FOLLOW_UP_POOL[category] || FOLLOW_UP_POOL.basic;
+  const shuffled = [...pool].sort(() => Math.random() - 0.5);
+  return shuffled.slice(0, 3);
+}
 
 type Step = "input" | "category" | "partner-input" | "chatting";
 
@@ -805,7 +875,7 @@ export default function ChatPage() {
                 <div className="space-y-3 pt-4 animate-[fadeInUp_0.5s_ease-out]">
                   <p className="text-sm font-bold" style={{ color: "#3182F6" }}>💬 이런 것도 물어보세요</p>
                   <div className="flex flex-col gap-2">
-                    {(FOLLOW_UP_SUGGESTIONS[category] || FOLLOW_UP_SUGGESTIONS.basic).map((suggestion, i) => (
+                    {getFollowUpSuggestions(category).map((suggestion, i) => (
                       <button key={i} onClick={() => handleSend(suggestion)}
                         className="flex items-center justify-between w-full px-5 py-3.5 rounded-2xl text-sm font-medium transition-all hover:scale-[1.01] hover:shadow-md"
                         style={{ backgroundColor: "#FFFFFF", border: "1px solid #E5E8EB", color: "#191F28", animationDelay: `${i * 100}ms` }}>
