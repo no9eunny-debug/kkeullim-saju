@@ -61,16 +61,23 @@ export async function runAnalysisPipeline(
   const saju = calculateSaju(input.birthDate, input.birthTime, input.gender);
   const sajuText = sajuToPromptText(saju, input.mbti);
 
-  // 궁합인 경우 상대방 사주도 계산
+  // 궁합/연애운/재회운: 상대방 사주도 계산
   let partnerSaju: SajuResult | undefined;
   let partnerText = "";
-  if (input.category === "compatibility" && input.partnerBirthDate) {
+  const partnerCategories = ["compatibility", "love", "reunion"];
+  if (partnerCategories.includes(input.category) && input.partnerBirthDate) {
     partnerSaju = calculateSaju(
       input.partnerBirthDate,
       input.partnerBirthTime || null,
       input.partnerGender || "unknown"
     );
     partnerText = `\n\n[상대방 사주 정보]\n${sajuToPromptText(partnerSaju, input.partnerMbti || "모름")}`;
+    partnerText += `\n\n## 중요: 상대방 정보가 제공되었습니다!
+반드시 두 사람의 사주를 비교 분석해주세요.
+- 두 사람의 일간 오행 관계 (상생/상극)
+- 두 사람 사이의 합/충 관계
+- 두 MBTI 유형의 궁합과 사주적 궁합 비교
+- 이 조합의 장점과 주의할 점을 구체적으로`;
   }
 
   const userMessage = `${sajuText}${partnerText}\n\n위 사주 정보를 바탕으로 분석해주세요.`;
