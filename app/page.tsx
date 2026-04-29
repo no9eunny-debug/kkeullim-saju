@@ -42,6 +42,9 @@ function Header() {
           <button onClick={() => router.push("/daily")} className="hidden sm:inline-flex text-sm font-medium px-4 py-2 rounded-xl transition-colors" style={{ color: "#4E5968" }}>
             오늘의 운세
           </button>
+          <button onClick={() => router.push("/chat?category=lucky-items")} className="hidden sm:inline-flex text-sm font-medium px-4 py-2 rounded-xl transition-colors" style={{ color: "#4E5968" }}>
+            ✨ 행운 아이템
+          </button>
           {loggedIn ? (
             <button onClick={() => router.push("/mypage")} className="hidden sm:inline-flex items-center gap-1.5 text-sm font-medium px-4 py-2 rounded-xl transition-colors" style={{ color: "#3182F6" }}>
               <UserCircle className="w-4 h-4" />

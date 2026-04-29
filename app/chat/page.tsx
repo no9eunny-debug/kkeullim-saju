@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { Sparkles, Send, ArrowLeft, Link2, Check, ChevronRight, UserPlus, Save, X, User, UserCircle, Share2 } from "lucide-react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
@@ -251,6 +252,16 @@ function MessageContent({ content }: { content: string }) {
 }
 
 export default function ChatPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500" /></div>}>
+      <ChatPageInner />
+    </Suspense>
+  );
+}
+
+function ChatPageInner() {
+  const searchParams = useSearchParams();
+  const initialCategory = searchParams.get("category") || "";
   const [step, setStep] = useState<Step>("input");
   const [mbti, setMbti] = useState("");
   const [birthDate, setBirthDate] = useState("");
@@ -258,7 +269,7 @@ export default function ChatPage() {
   const [birthTimeUnknown, setBirthTimeUnknown] = useState(false);
   const [gender, setGender] = useState<"male" | "female" | "">("");
   const [nickname, setNickname] = useState("");
-  const [category, setCategory] = useState("");
+  const [category, setCategory] = useState(initialCategory);
 
   // 상대방 정보 (연애운/궁합/재회운)
   const [wantPartner, setWantPartner] = useState(false);
