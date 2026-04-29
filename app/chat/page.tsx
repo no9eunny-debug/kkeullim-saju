@@ -160,28 +160,33 @@ const FOLLOW_UP_POOL: Record<string, string[]> = {
 const LUCKY_ITEMS: Record<string, { name: string; desc: string; emoji: string; url: string }[]> = {
   목: [
     { name: "목 오행 원석 팔찌", desc: "목 기운 보충 행운 팔찌", emoji: "🌿", url: "https://link.coupang.com/a/eyK8so" },
-    { name: "아로마 캔들", desc: "따뜻한 힐링 캔들", emoji: "🕯️", url: "https://link.coupang.com/a/eyLa2X" },
+    { name: "원석 펜던트 목걸이", desc: "천연 원석 행운 목걸이", emoji: "📿", url: "https://naver.me/FXnru3NL" },
+    { name: "우디향 디퓨저", desc: "나무향 목 기운 충전", emoji: "🌳", url: "https://link.coupang.com/a/eyNGFH" },
     { name: "클로버 캔들워머", desc: "감성 인테리어 캔들워머", emoji: "🍀", url: "https://link.coupang.com/a/eyLcc2" },
   ],
   화: [
     { name: "화 오행 원석 팔찌", desc: "화 기운 보충 행운 팔찌", emoji: "🔥", url: "https://link.coupang.com/a/eyK78E" },
+    { name: "탄생석 목걸이", desc: "나만의 탄생석 행운 주얼리", emoji: "💎", url: "https://naver.me/5vJYkB8M" },
+    { name: "LED 무드등", desc: "따뜻한 불빛 화 기운 인테리어", emoji: "💡", url: "https://naver.me/F4WtvNbb" },
     { name: "촉촉 립밤", desc: "매일 바르는 화 기운 뷰티템", emoji: "💋", url: "https://link.coupang.com/a/eyLgQO" },
-    { name: "글로시 립밤", desc: "윤기나는 데일리 립케어", emoji: "✨", url: "https://link.coupang.com/a/eyLhh5" },
   ],
   토: [
     { name: "토 오행 원석 팔찌", desc: "토 기운 보충 행운 팔찌", emoji: "🏔️", url: "https://link.coupang.com/a/eyK7pb" },
-    { name: "캔들워머", desc: "안정감 있는 감성 인테리어", emoji: "🕯️", url: "https://link.coupang.com/a/eyLbLp" },
+    { name: "아로마 디퓨저 세트", desc: "안정감 있는 힐링 디퓨저", emoji: "🧘", url: "https://naver.me/xiL5Ov1M" },
+    { name: "감성 무드등", desc: "포근한 토 기운 조명", emoji: "🌙", url: "https://naver.me/GVVWwSib" },
     { name: "보온 텀블러", desc: "따뜻함을 담는 데일리템", emoji: "🥤", url: "https://link.coupang.com/a/eyLe34" },
   ],
   금: [
     { name: "금 오행 원석 팔찌", desc: "금 기운 보충 행운 팔찌", emoji: "⚔️", url: "https://link.coupang.com/a/eyK6UC" },
+    { name: "원석 펜던트 목걸이", desc: "세련된 금 기운 주얼리", emoji: "📿", url: "https://naver.me/FXnru3NL" },
     { name: "스텐 텀블러", desc: "금속 소재 금 기운 아이템", emoji: "🥤", url: "https://link.coupang.com/a/eyLfz2" },
     { name: "미니 텀블러", desc: "휴대용 금 기운 텀블러", emoji: "✨", url: "https://link.coupang.com/a/eyLf0G" },
   ],
   수: [
     { name: "수 오행 원석 팔찌", desc: "수 기운 보충 행운 팔찌", emoji: "💎", url: "https://link.coupang.com/a/eyK7IP" },
-    { name: "아로마 캔들", desc: "시원한 수 기운 힐링 캔들", emoji: "💧", url: "https://link.coupang.com/a/eyLa2X" },
-    { name: "캔들워머", desc: "은은한 감성 무드등", emoji: "🌊", url: "https://link.coupang.com/a/eyLbLp" },
+    { name: "미니 가습기", desc: "수 기운 충전 촉촉 가습기", emoji: "💧", url: "https://naver.me/5yhqR471" },
+    { name: "미니 무드 가습기", desc: "무드등 겸용 수 기운 아이템", emoji: "🌊", url: "https://naver.me/5xgnAlPm" },
+    { name: "시원한 디퓨저", desc: "오션향 수 기운 디퓨저", emoji: "🐚", url: "https://link.coupang.com/a/eyNGFH" },
   ],
 };
 
