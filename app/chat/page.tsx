@@ -698,10 +698,10 @@ function ChatPageInner() {
             ) : (
               <button onClick={handleBack} className="p-1"><ArrowLeft className="w-5 h-5" style={{ color: "#4E5968" }} /></button>
             )}
-            <div className="flex items-center gap-2">
+            <a href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
               <Sparkles className="w-5 h-5" style={{ color: "#3182F6" }} />
               <span className="font-bold" style={{ color: "#191F28" }}>합리적 미신</span>
-            </div>
+            </a>
           </div>
           <div className="flex items-center gap-2">
             {step === "chatting" && (
