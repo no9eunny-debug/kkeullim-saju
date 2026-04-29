@@ -6,6 +6,9 @@ import { Sparkles, Send, ArrowLeft, Link2, Check, ChevronRight, UserPlus, Save, 
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { LOADING_TIPS } from "@/lib/saju/loading-tips";
+import dynamic from "next/dynamic";
+
+const ShareCard = dynamic(() => import("@/components/ShareCard"), { ssr: false });
 
 interface SavedProfile {
   id: string;
@@ -296,6 +299,7 @@ function ChatPageInner() {
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [analysisCount, setAnalysisCount] = useState(0);
+  const [sajuData, setSajuData] = useState<{ ilju: string; ohang: Record<string, number> } | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const tipInterval = useRef<NodeJS.Timeout | null>(null);
@@ -462,6 +466,7 @@ function ChatPageInner() {
       } else {
         setMessages(prev => [...prev, { role: "assistant", content: data.result }]);
         if (data.sessionId) setSessionId(data.sessionId);
+        if (data.saju) setSajuData({ ilju: data.saju.ilju || "", ohang: data.saju.ohang || {} });
         setAnalysisCount(prev => prev + 1);
       }
     } catch {
@@ -970,6 +975,16 @@ function ChatPageInner() {
                             이 링크는 쿠팡 파트너스 및 네이버 쇼핑 커넥트 활동의 일환으로, 이에 따른 소정의 수수료를 제공받습니다.
                           </p>
                         </div>
+                      )}
+
+                      {/* 공유 카드 (첫 분석 결과) */}
+                      {isAssistant && isFirstAnalysis && sajuData && (
+                        <ShareCard
+                          mbti={mbti}
+                          ilju={sajuData.ilju}
+                          ohang={sajuData.ohang as any}
+                          category={category}
+                        />
                       )}
 
                       {/* 공유 버튼 (AI 분석 결과) */}
