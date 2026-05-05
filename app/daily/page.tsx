@@ -16,6 +16,34 @@ interface SavedProfile {
   is_me: boolean;
 }
 
+const DAILY_LUCKY_ITEMS: Record<string, { name: string; emoji: string; desc: string }[]> = {
+  목: [
+    { name: "초록 폰케이스", emoji: "🌿", desc: "목 기운을 채워주는 그린 아이템" },
+    { name: "원목 소품", emoji: "🪵", desc: "자연의 에너지를 담은 나무 소재" },
+    { name: "민트 향초", emoji: "🕯️", desc: "상쾌한 목 기운의 아로마" },
+  ],
+  화: [
+    { name: "레드 립밤", emoji: "💄", desc: "화 기운을 북돋우는 레드 포인트" },
+    { name: "시나몬 라떼", emoji: "☕", desc: "따뜻한 화 기운의 음료" },
+    { name: "캔들워머", emoji: "🔥", desc: "은은한 불꽃으로 화 기운 충전" },
+  ],
+  토: [
+    { name: "도자기 머그컵", emoji: "🍵", desc: "흙의 안정감을 담은 아이템" },
+    { name: "베이지 가방", emoji: "👜", desc: "토 기운의 따뜻한 색감" },
+    { name: "고구마 간식", emoji: "🍠", desc: "뿌리채소로 토 에너지 보충" },
+  ],
+  금: [
+    { name: "실버 반지", emoji: "💍", desc: "금 기운을 높여주는 메탈 액세서리" },
+    { name: "스텐 텀블러", emoji: "🥤", desc: "금속 소재로 금 기운 충전" },
+    { name: "흰색 셔츠", emoji: "👔", desc: "금의 맑은 기운을 담은 화이트" },
+  ],
+  수: [
+    { name: "수정 팔찌", emoji: "💎", desc: "수 기운의 맑은 에너지" },
+    { name: "미니 가습기", emoji: "💧", desc: "물의 기운으로 수 에너지 보충" },
+    { name: "네이비 파우치", emoji: "🌊", desc: "깊은 수 기운의 컬러 아이템" },
+  ],
+};
+
 const MBTI_TYPES = [
   "INTJ", "INTP", "ENTJ", "ENTP",
   "INFJ", "INFP", "ENFJ", "ENFP",
@@ -474,8 +502,28 @@ export default function DailyPage() {
               </div>
             </div>
 
+            {/* 오늘의 행운 아이템 */}
+            <div className="space-y-2" style={fade(0.32)}>
+              <p className="text-sm font-bold" style={{ color: "#191F28" }}>오늘의 행운 아이템</p>
+              <p className="text-xs mb-2" style={{ color: "#8B95A1" }}>
+                {result.dominantElement} 기운을 보충해줄 아이템이에요
+              </p>
+              <div className="space-y-2">
+                {(DAILY_LUCKY_ITEMS[result.dominantElement] || DAILY_LUCKY_ITEMS["목"]).map((item, i) => (
+                  <div key={i} className="flex items-center gap-3 p-4 rounded-xl"
+                    style={{ backgroundColor: "#FFFFFF", border: "1px solid #E5E8EB" }}>
+                    <span className="text-2xl shrink-0">{item.emoji}</span>
+                    <div className="flex-1">
+                      <p className="text-xs font-bold" style={{ color: "#191F28" }}>{item.name}</p>
+                      <p className="text-xs" style={{ color: "#6B7684" }}>{item.desc}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
             {/* 미니 운세 */}
-            <div className="space-y-2" style={fade(0.35)}>
+            <div className="space-y-2" style={fade(0.38)}>
               <p className="text-sm font-bold" style={{ color: "#191F28" }}>오늘의 미니 운세</p>
               {([
                 { emoji: "\uD83D\uDC95", label: "연애", text: result.miniForecasts.love },
@@ -494,7 +542,7 @@ export default function DailyPage() {
             </div>
 
             {/* 메인 메시지 */}
-            <div className="rounded-2xl p-6" style={{ ...fade(0.4), backgroundColor: "#FFFFFF", border: "1px solid #E5E8EB" }}>
+            <div className="rounded-2xl p-6" style={{ ...fade(0.44), backgroundColor: "#FFFFFF", border: "1px solid #E5E8EB" }}>
               <p className="text-sm leading-relaxed text-center" style={{ color: "#4E5968" }}>
                 {result.message}
               </p>
@@ -502,7 +550,7 @@ export default function DailyPage() {
 
             {/* Premium teaser */}
             <div className="rounded-2xl p-5 relative overflow-hidden"
-              style={{ ...fade(0.45), background: "linear-gradient(135deg, #1E3A5F 0%, #3182F6 100%)" }}>
+              style={{ ...fade(0.49), background: "linear-gradient(135deg, #1E3A5F 0%, #3182F6 100%)" }}>
               <div className="relative z-10">
                 <div className="flex items-center gap-2 mb-2">
                   <Sparkles className="w-4 h-4 text-yellow-300" />
@@ -520,7 +568,7 @@ export default function DailyPage() {
             </div>
 
             {/* CTA */}
-            <div className="space-y-3" style={fade(0.5)}>
+            <div className="space-y-3" style={fade(0.54)}>
               <button onClick={() => router.push("/chat")}
                 className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl text-base font-bold text-white transition-all hover:scale-[1.01] active:scale-[0.99]"
                 style={{ backgroundColor: "#3182F6" }}>

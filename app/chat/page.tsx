@@ -10,6 +10,7 @@ import dynamic from "next/dynamic";
 
 const ShareCard = dynamic(() => import("@/components/ShareCard"), { ssr: false });
 const CoupleShareCard = dynamic(() => import("@/components/CoupleShareCard"), { ssr: false });
+const SajuPillars = dynamic(() => import("@/components/SajuPillars"), { ssr: false });
 
 interface SavedProfile {
   id: string;
@@ -406,7 +407,14 @@ function ChatPageInner() {
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [analysisCount, setAnalysisCount] = useState(0);
-  const [sajuData, setSajuData] = useState<{ ilju: string; ohang: Record<string, number> } | null>(null);
+  const [sajuData, setSajuData] = useState<{
+    ilju: string; ohang: Record<string, number>;
+    yearPillar?: { gan: string; ji: string };
+    monthPillar?: { gan: string; ji: string };
+    dayPillar?: { gan: string; ji: string };
+    timePillar?: { gan: string; ji: string } | null;
+    tti?: string;
+  } | null>(null);
   const [partnerSaju, setPartnerSaju] = useState<{ ilju: string; ohang: Record<string, number> } | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -610,7 +618,15 @@ function ChatPageInner() {
       } else {
         setMessages(prev => [...prev, { role: "assistant", content: data.result }]);
         if (data.sessionId) setSessionId(data.sessionId);
-        if (data.saju) setSajuData({ ilju: data.saju.ilju || "", ohang: data.saju.ohang || {} });
+        if (data.saju) setSajuData({
+          ilju: data.saju.ilju || "",
+          ohang: data.saju.ohang || {},
+          yearPillar: data.saju.yearPillar,
+          monthPillar: data.saju.monthPillar,
+          dayPillar: data.saju.dayPillar,
+          timePillar: data.saju.timePillar,
+          tti: data.saju.tti,
+        });
         if (data.partnerSaju) setPartnerSaju({ ilju: data.partnerSaju.ilju || "", ohang: data.partnerSaju.ohang || {} });
         setAnalysisCount(prev => prev + 1);
       }
@@ -1157,6 +1173,23 @@ function ChatPageInner() {
                 );
               })}
 
+              {/* 4기둥 시각화 (사주 데이터가 있고 분석 완료 후) */}
+              {!loading && sajuData && sajuData.ilju && sajuData.yearPillar && messages.length > 0 && (
+                <div className="flex justify-center animate-[fadeInUp_0.4s_ease-out]">
+                  <SajuPillars
+                    nickname={nickname}
+                    mbti={mbti}
+                    yearPillar={sajuData.yearPillar}
+                    monthPillar={sajuData.monthPillar!}
+                    dayPillar={sajuData.dayPillar!}
+                    timePillar={sajuData.timePillar ?? null}
+                    ilju={sajuData.ilju}
+                    tti={sajuData.tti || ""}
+                    ohang={sajuData.ohang as any}
+                  />
+                </div>
+              )}
+
               {/* 공유 카드 (사주 데이터가 있고 분석 완료 후) */}
               {!loading && sajuData && sajuData.ilju && messages.length > 0 && (
                 <div className="flex justify-center animate-[fadeInUp_0.5s_ease-out]">
@@ -1266,11 +1299,24 @@ function ChatPageInner() {
             </div>
 
             {/* Input */}
-            <div className="sticky bottom-0 pt-4 pb-2" style={{ backgroundColor: "#F8FAFB" }}>
+            <div className="sticky bottom-0 pt-3 pb-2" style={{ backgroundColor: "#F8FAFB" }}>
+              {/* 카테고리 칩 (빠른 전환) */}
+              {!loading && messages.length > 0 && (
+                <div className="flex gap-1.5 overflow-x-auto pb-2 mb-2 scrollbar-hide">
+                  {CATEGORIES.filter(c => c.key !== category).slice(0, 4).map(cat => (
+                    <button key={cat.key} onClick={() => handleStartAnalysis(cat.key)}
+                      className="shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium transition-all hover:shadow-sm"
+                      style={{ backgroundColor: "#FFFFFF", border: "1px solid #E5E8EB", color: "#4E5968" }}>
+                      <span>{cat.emoji}</span>
+                      <span>{cat.label}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
               <div className="flex gap-2">
                 <input value={input} onChange={e => setInput(e.target.value)}
                   onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
-                  placeholder="궁금한 것을 물어보세요..." disabled={loading}
+                  placeholder="궁금한 걸 자유롭게 물어보세요..." disabled={loading}
                   className="flex-1 px-4 py-3.5 rounded-2xl text-sm disabled:opacity-50 outline-none"
                   style={{ backgroundColor: "#FFFFFF", border: "1px solid #E5E8EB", color: "#191F28" }} />
                 <button onClick={() => handleSend()} disabled={loading || !input.trim()}
