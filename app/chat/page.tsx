@@ -508,12 +508,47 @@ function ChatPageInner() {
           setGender((myProfile.gender as "male" | "female") || "");
           if (myProfile.birth_time === null) setBirthTimeUnknown(true);
 
-          // initialCategory가 있고, 프로필 정보가 충분하면 바로 카테고리 선택 단계로
-          const savedNickname = localStorage.getItem("saju_nickname");
-          if (initialCategory && !autoStartedRef.current && myProfile.mbti && myProfile.birth_date && myProfile.gender && savedNickname) {
+          // initialCategory가 있고, 프로필 정보가 충분하면 바로 분석 시작
+          if (initialCategory && !autoStartedRef.current && myProfile.mbti && myProfile.birth_date && myProfile.gender) {
             autoStartedRef.current = true;
+            const savedNickname = localStorage.getItem("saju_nickname") || myProfile.name || "사주 주인공";
             setNickname(savedNickname);
-            setStep("category");
+            setCategory(initialCategory);
+            setStep("chatting");
+            // state가 아직 반영 안 됐으므로 프로필 데이터로 직접 API 호출
+            setLoading(true);
+            fetch("/api/chat", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                mbti: myProfile.mbti,
+                birthDate: myProfile.birth_date,
+                birthTime: myProfile.birth_time || null,
+                gender: myProfile.gender,
+                nickname: savedNickname,
+                category: initialCategory,
+                userId: userId || undefined,
+                guestId: userId ? undefined : getGuestId(),
+              }),
+            }).then(r => r.json()).then(apiData => {
+              if (apiData.error) {
+                setMessages(prev => [...prev, { role: "assistant", content: apiData.message || apiData.error }]);
+              } else {
+                setMessages(prev => [...prev, { role: "assistant", content: apiData.result }]);
+                if (apiData.sessionId) setSessionId(apiData.sessionId);
+                if (apiData.saju) setSajuData({
+                  ilju: apiData.saju.ilju || "", ohang: apiData.saju.ohang || {},
+                  yearPillar: apiData.saju.yearPillar, monthPillar: apiData.saju.monthPillar,
+                  dayPillar: apiData.saju.dayPillar, timePillar: apiData.saju.timePillar,
+                  tti: apiData.saju.tti,
+                });
+                setAnalysisCount(prev => prev + 1);
+              }
+              setLoading(false);
+            }).catch(() => {
+              setMessages(prev => [...prev, { role: "assistant", content: "네트워크 오류가 발생했어요. 잠시 후 다시 시도해주세요." }]);
+              setLoading(false);
+            });
           }
         }
       }
@@ -932,10 +967,17 @@ function ChatPageInner() {
                   <Save className="w-4 h-4" /> 저장
                 </button>
               )}
-              <button onClick={() => setStep("category")} disabled={!canProceed}
+              <button onClick={() => {
+                if (initialCategory) {
+                  if (!nickname.trim()) setNickname("사주 주인공");
+                  handleStartAnalysis(initialCategory);
+                } else {
+                  setStep("category");
+                }
+              }} disabled={!mbti || !birthDate || !gender || (!nickname.trim() && !initialCategory)}
                 className="flex-1 py-4 rounded-2xl text-base font-bold text-white transition-all hover:scale-[1.01] active:scale-[0.99] disabled:opacity-40"
                 style={{ backgroundColor: "#3182F6" }}>
-                다음
+                {initialCategory ? "분석 시작" : "다음"}
               </button>
             </div>
           </div>
