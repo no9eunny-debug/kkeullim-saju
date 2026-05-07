@@ -358,6 +358,7 @@ export async function POST(req: Request) {
       luckyNumber,
       luckyDirection,
       luckyItem,
+      yongElement: yongEl,
       dominantElement: dominant,
       todayElement: tEl,
       ilju: userSaju.ilju,

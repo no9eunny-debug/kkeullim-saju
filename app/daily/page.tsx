@@ -62,6 +62,7 @@ interface DailyResult {
   luckyDirection: string;
   dominantElement: string;
   todayElement: string;
+  yongElement: string;
   ilju: string;
   tti: string;
   todaySipsung: string;
@@ -506,10 +507,10 @@ export default function DailyPage() {
             <div className="space-y-2" style={fade(0.32)}>
               <p className="text-sm font-bold" style={{ color: "#191F28" }}>오늘의 행운 아이템</p>
               <p className="text-xs mb-2" style={{ color: "#8B95A1" }}>
-                {result.dominantElement} 기운을 보충해줄 아이템이에요
+                부족한 {result.yongElement || result.dominantElement} 기운을 보충해줄 아이템이에요
               </p>
               <div className="space-y-2">
-                {(DAILY_LUCKY_ITEMS[result.dominantElement] || DAILY_LUCKY_ITEMS["목"]).map((item, i) => (
+                {(DAILY_LUCKY_ITEMS[result.yongElement] || DAILY_LUCKY_ITEMS[result.dominantElement] || DAILY_LUCKY_ITEMS["목"]).map((item, i) => (
                   <div key={i} className="flex items-center gap-3 p-4 rounded-xl"
                     style={{ backgroundColor: "#FFFFFF", border: "1px solid #E5E8EB" }}>
                     <span className="text-2xl shrink-0">{item.emoji}</span>

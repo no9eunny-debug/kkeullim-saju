@@ -99,7 +99,9 @@ export async function runAnalysisPipeline(
     }
   }
 
-  const userMessage = `${sajuText}${partnerText}\n\n위 사주 정보를 바탕으로 분석해주세요.`;
+  const today = new Date();
+  const currentDateStr = `${today.getFullYear()}년 ${today.getMonth() + 1}월 ${today.getDate()}일`;
+  const userMessage = `[현재 날짜: ${currentDateStr} (${today.getFullYear()}년)]\n\n${sajuText}${partnerText}\n\n위 사주 정보를 바탕으로 분석해주세요.`;
 
   // 2. GPT-4o 단독 분석 (Gemini/Groq 제거 — 한국어 사주 분석 품질 최상)
   let finalResult: string;
