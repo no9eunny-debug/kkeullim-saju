@@ -488,6 +488,9 @@ function ChatPageInner() {
     loadSavedProfiles();
   }, [userId]);
 
+  // URL category 파라미터로 직접 진입 시 자동 분석 시작 (프로필 있을 때)
+  const autoStartedRef = useRef(false);
+
   const loadSavedProfiles = async () => {
     const guestId = getGuestId();
     const params = userId ? `userId=${userId}` : `guestId=${guestId}`;
@@ -504,6 +507,14 @@ function ChatPageInner() {
           setBirthTime(myProfile.birth_time || "");
           setGender((myProfile.gender as "male" | "female") || "");
           if (myProfile.birth_time === null) setBirthTimeUnknown(true);
+
+          // initialCategory가 있고, 프로필 정보가 충분하면 바로 카테고리 선택 단계로
+          const savedNickname = localStorage.getItem("saju_nickname");
+          if (initialCategory && !autoStartedRef.current && myProfile.mbti && myProfile.birth_date && myProfile.gender && savedNickname) {
+            autoStartedRef.current = true;
+            setNickname(savedNickname);
+            setStep("category");
+          }
         }
       }
     } catch {}
