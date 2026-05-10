@@ -186,6 +186,8 @@ export async function POST(req: Request) {
           dayPillar: analysis.saju.dayPillar,
           timePillar: analysis.saju.timePillar,
           eumyang: analysis.saju.eumyang,
+          daeun: analysis.saju.daeun,
+          seun: analysis.saju.seun,
         },
         partnerSaju: analysis.partnerSaju ? {
           ilju: analysis.partnerSaju.ilju,

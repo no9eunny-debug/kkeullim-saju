@@ -91,6 +91,24 @@ function getMonthPillar(year: number, month: number, yearGanIdx: number) {
   };
 }
 
+// 대운 (10년 주기 운세)
+export interface DaeunInfo {
+  startAge: number;
+  endAge: number;
+  gan: string;
+  ji: string;
+  ohang: { gan: string; ji: string };
+}
+
+// 세운 (연운)
+export interface SeunInfo {
+  year: number;
+  age: number;
+  gan: string;
+  ji: string;
+  ohang: { gan: string; ji: string };
+}
+
 export interface SajuResult {
   // 사주 원국
   yearPillar: { gan: string; ji: string };
@@ -105,6 +123,9 @@ export interface SajuResult {
   tti: string;
   // 음양
   eumyang: { year: string; month: string; day: string; time: string | null };
+  // 대운/세운
+  daeun?: DaeunInfo[];
+  seun?: SeunInfo[];
   // 원본 입력
   input: {
     birthDate: string;
@@ -112,6 +133,61 @@ export interface SajuResult {
     gender: string;
     calendar: string;
   };
+}
+
+// ---------------------------------------------------------------------------
+// 대운 계산 (10년 주기 운세)
+// ---------------------------------------------------------------------------
+export function calculateDaeun(saju: SajuResult, gender: string): DaeunInfo[] {
+  // 연간의 음양과 성별로 순행/역행 결정
+  const yearGanEumyang = EUMYANG_GAN[saju.yearPillar.gan];
+  const isForward =
+    (yearGanEumyang === "양" && gender === "male") ||
+    (yearGanEumyang === "음" && gender === "female");
+
+  // 월주 천간/지지 인덱스
+  const monthGanIdx = CHEONGAN.indexOf(saju.monthPillar.gan as any);
+  const monthJiIdx = JIJI.indexOf(saju.monthPillar.ji as any);
+
+  const results: DaeunInfo[] = [];
+  for (let i = 1; i <= 8; i++) {
+    const direction = isForward ? i : -i;
+    const ganIdx = mod(monthGanIdx + direction, 10);
+    const jiIdx = mod(monthJiIdx + direction, 12);
+    const gan = CHEONGAN[ganIdx];
+    const ji = JIJI[jiIdx];
+    results.push({
+      startAge: i * 10 - 8, // 2, 12, 22, 32, 42, 52, 62, 72
+      endAge: i * 10 + 1,   // 11, 21, 31, 41, 51, 61, 71, 81
+      gan,
+      ji,
+      ohang: { gan: getOhang(gan), ji: getOhang(ji) },
+    });
+  }
+  return results;
+}
+
+// ---------------------------------------------------------------------------
+// 세운 계산 (연운, 올해부터 N년)
+// ---------------------------------------------------------------------------
+export function calculateSeun(birthYear: number, count: number = 10): SeunInfo[] {
+  const currentYear = new Date().getFullYear();
+  const results: SeunInfo[] = [];
+  for (let i = 0; i < count; i++) {
+    const year = currentYear + i;
+    const ganIdx = mod(year - 4, 10);
+    const jiIdx = mod(year - 4, 12);
+    const gan = CHEONGAN[ganIdx];
+    const ji = JIJI[jiIdx];
+    results.push({
+      year,
+      age: year - birthYear + 1, // 한국 나이
+      gan,
+      ji,
+      ohang: { gan: getOhang(gan), ji: getOhang(ji) },
+    });
+  }
+  return results;
 }
 
 export function calculateSaju(
@@ -172,7 +248,7 @@ export function calculateSaju(
     if (oh) ohangDistribution[oh]++;
   }
 
-  return {
+  const result: SajuResult = {
     yearPillar,
     monthPillar,
     dayPillar,
@@ -188,6 +264,13 @@ export function calculateSaju(
     },
     input: { birthDate, birthTime, gender, calendar },
   };
+
+  // 대운/세운 계산 추가
+  result.daeun = calculateDaeun(result, gender);
+  const birthYear = new Date(birthDate).getFullYear();
+  result.seun = calculateSeun(birthYear, 10);
+
+  return result;
 }
 
 // ---------------------------------------------------------------------------
@@ -411,6 +494,24 @@ export function sajuToPromptText(saju: SajuResult, mbti: string): string {
   if (relations.length) {
     lines.push(``, `[합/충 관계]`);
     relations.forEach(r => lines.push(`- ${r}`));
+  }
+
+  // 대운 (10년 주기 운세)
+  const daeun = saju.daeun || calculateDaeun(saju, saju.input.gender);
+  lines.push(``, `[대운 (10년 주기 운세)]`);
+  for (const d of daeun) {
+    const sipsung = calcSipsung(dayGan, d.gan);
+    lines.push(`${d.startAge}~${d.endAge}세: ${d.gan}${d.ji} (${d.ohang.gan}/${d.ohang.ji})${sipsung ? ` [${sipsung}]` : ""}`);
+  }
+
+  // 세운 (올해~향후 5년)
+  const birthYear = new Date(saju.input.birthDate).getFullYear();
+  const seun = saju.seun || calculateSeun(birthYear, 5);
+  const seunSlice = seun.slice(0, 5); // 프롬프트에는 5년만
+  lines.push(``, `[세운 (연운, 올해~향후 5년)]`);
+  for (const s of seunSlice) {
+    const sipsung = calcSipsung(dayGan, s.gan);
+    lines.push(`${s.year}년 (${s.age}세): ${s.gan}${s.ji} (${s.ohang.gan}/${s.ohang.ji})${sipsung ? ` [${sipsung}]` : ""}`);
   }
 
   return lines.join("\n");
