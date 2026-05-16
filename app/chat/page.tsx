@@ -420,7 +420,11 @@ function ChatPageInner() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const tipInterval = useRef<NodeJS.Timeout | null>(null);
 
-  const canProceed = mbti && birthDate && gender && nickname.trim();
+  const birthParts = birthDate.split("-");
+  const birthValid = birthParts[0]?.length === 4 && birthParts[1]?.length >= 1 && birthParts[2]?.length >= 1;
+  // API용 YYYY-MM-DD 포맷 (0 패딩)
+  const birthDateFormatted = birthValid ? `${birthParts[0]}-${birthParts[1].padStart(2, "0")}-${birthParts[2].padStart(2, "0")}` : birthDate;
+  const canProceed = mbti && birthValid && gender && nickname.trim();
 
   // sessionStorage 복원 (뒤로가기 히스토리 보존)
   const restoredRef = useRef(false);
@@ -563,7 +567,7 @@ function ChatPageInner() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           userId, guestId, name, isMe,
-          mbti, birthDate, birthTime: birthTimeUnknown ? null : birthTime || null, gender,
+          mbti, birthDate: birthDateFormatted, birthTime: birthTimeUnknown ? null : birthTime || null, gender,
         }),
       });
       loadSavedProfiles();
@@ -612,9 +616,15 @@ function ChatPageInner() {
     setPartnerGender((profile.gender as "male" | "female") || "");
   };
 
-  // 자동 스크롤
+  // 자동 스크롤 — 새 메시지 추가 시 마지막 사용자 메시지 위치로 스크롤 (답변이 바로 보이도록)
+  const lastUserMsgRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (messages.length === 0) return;
+    const lastMsg = messages[messages.length - 1];
+    // 사용자 메시지 추가 직후 or 로딩 시작 시 → 사용자 메시지를 상단에 표시
+    if (lastMsg?.role === "user" || loading) {
+      lastUserMsgRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
   }, [messages, loading]);
 
   // 로딩 팁 로테이션 (MBTI별 팁 포함)
@@ -648,7 +658,7 @@ function ChatPageInner() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           mbti,
-          birthDate,
+          birthDate: birthDateFormatted,
           birthTime: birthTimeUnknown ? null : birthTime || null,
           gender,
           nickname: nickname || undefined,
@@ -744,7 +754,7 @@ function ChatPageInner() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          mbti, birthDate,
+          mbti, birthDate: birthDateFormatted,
           birthTime: birthTimeUnknown ? null : birthTime || null,
           gender, category,
           nickname: nickname || undefined,
@@ -884,9 +894,49 @@ function ChatPageInner() {
             {/* Birth Date */}
             <div>
               <label className="text-sm font-bold mb-3 block" style={{ color: "#191F28" }}>생년월일</label>
-              <input type="date" value={birthDate} onChange={e => setBirthDate(e.target.value)}
-                className="w-full px-4 py-3.5 rounded-xl text-sm outline-none"
-                style={{ backgroundColor: "#FFFFFF", border: "1px solid #E5E8EB", color: birthDate ? "#191F28" : "#8B95A1" }} />
+              <div className="flex items-center gap-2">
+                <input
+                  type="text" inputMode="numeric" placeholder="YYYY" maxLength={4}
+                  value={birthDate.split("-")[0] || ""}
+                  onChange={e => {
+                    const v = e.target.value.replace(/\D/g, "").slice(0, 4);
+                    const parts = birthDate.split("-");
+                    const newDate = [v, parts[1] || "", parts[2] || ""].join("-");
+                    setBirthDate(newDate);
+                    if (v.length === 4) (e.target.nextElementSibling?.nextElementSibling as HTMLInputElement)?.focus();
+                  }}
+                  className="w-[72px] px-3 py-3.5 rounded-xl text-sm text-center outline-none"
+                  style={{ backgroundColor: "#FFFFFF", border: "1px solid #E5E8EB", color: "#191F28" }}
+                />
+                <span className="text-sm" style={{ color: "#8B95A1" }}>년</span>
+                <input
+                  type="text" inputMode="numeric" placeholder="MM" maxLength={2}
+                  value={birthDate.split("-")[1] || ""}
+                  onChange={e => {
+                    const v = e.target.value.replace(/\D/g, "").slice(0, 2);
+                    const parts = birthDate.split("-");
+                    const newDate = [parts[0] || "", v, parts[2] || ""].join("-");
+                    setBirthDate(newDate);
+                    if (v.length === 2) (e.target.nextElementSibling?.nextElementSibling as HTMLInputElement)?.focus();
+                  }}
+                  className="w-[52px] px-3 py-3.5 rounded-xl text-sm text-center outline-none"
+                  style={{ backgroundColor: "#FFFFFF", border: "1px solid #E5E8EB", color: "#191F28" }}
+                />
+                <span className="text-sm" style={{ color: "#8B95A1" }}>월</span>
+                <input
+                  type="text" inputMode="numeric" placeholder="DD" maxLength={2}
+                  value={birthDate.split("-")[2] || ""}
+                  onChange={e => {
+                    const v = e.target.value.replace(/\D/g, "").slice(0, 2);
+                    const parts = birthDate.split("-");
+                    const newDate = [parts[0] || "", parts[1] || "", v].join("-");
+                    setBirthDate(newDate);
+                  }}
+                  className="w-[52px] px-3 py-3.5 rounded-xl text-sm text-center outline-none"
+                  style={{ backgroundColor: "#FFFFFF", border: "1px solid #E5E8EB", color: "#191F28" }}
+                />
+                <span className="text-sm" style={{ color: "#8B95A1" }}>일</span>
+              </div>
             </div>
             {/* Birth Time */}
             <div>
@@ -1081,8 +1131,46 @@ function ChatPageInner() {
                 {/* Partner Birth */}
                 <div>
                   <label className="text-xs font-medium mb-2 block" style={{ color: "#6B7684" }}>생년월일 (선택)</label>
-                  <input type="date" value={partnerBirthDate} onChange={e => setPartnerBirthDate(e.target.value)} className="w-full px-4 py-3 rounded-xl text-sm outline-none"
-                    style={{ backgroundColor: "#F8FAFB", border: "1px solid #E5E8EB", color: "#191F28" }} />
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text" inputMode="numeric" placeholder="YYYY" maxLength={4}
+                      value={partnerBirthDate.split("-")[0] || ""}
+                      onChange={e => {
+                        const v = e.target.value.replace(/\D/g, "").slice(0, 4);
+                        const parts = partnerBirthDate.split("-");
+                        setPartnerBirthDate([v, parts[1] || "", parts[2] || ""].join("-"));
+                        if (v.length === 4) (e.target.nextElementSibling?.nextElementSibling as HTMLInputElement)?.focus();
+                      }}
+                      className="w-[64px] px-2 py-3 rounded-xl text-sm text-center outline-none"
+                      style={{ backgroundColor: "#F8FAFB", border: "1px solid #E5E8EB", color: "#191F28" }}
+                    />
+                    <span className="text-xs" style={{ color: "#8B95A1" }}>년</span>
+                    <input
+                      type="text" inputMode="numeric" placeholder="MM" maxLength={2}
+                      value={partnerBirthDate.split("-")[1] || ""}
+                      onChange={e => {
+                        const v = e.target.value.replace(/\D/g, "").slice(0, 2);
+                        const parts = partnerBirthDate.split("-");
+                        setPartnerBirthDate([parts[0] || "", v, parts[2] || ""].join("-"));
+                        if (v.length === 2) (e.target.nextElementSibling?.nextElementSibling as HTMLInputElement)?.focus();
+                      }}
+                      className="w-[48px] px-2 py-3 rounded-xl text-sm text-center outline-none"
+                      style={{ backgroundColor: "#F8FAFB", border: "1px solid #E5E8EB", color: "#191F28" }}
+                    />
+                    <span className="text-xs" style={{ color: "#8B95A1" }}>월</span>
+                    <input
+                      type="text" inputMode="numeric" placeholder="DD" maxLength={2}
+                      value={partnerBirthDate.split("-")[2] || ""}
+                      onChange={e => {
+                        const v = e.target.value.replace(/\D/g, "").slice(0, 2);
+                        const parts = partnerBirthDate.split("-");
+                        setPartnerBirthDate([parts[0] || "", parts[1] || "", v].join("-"));
+                      }}
+                      className="w-[48px] px-2 py-3 rounded-xl text-sm text-center outline-none"
+                      style={{ backgroundColor: "#F8FAFB", border: "1px solid #E5E8EB", color: "#191F28" }}
+                    />
+                    <span className="text-xs" style={{ color: "#8B95A1" }}>일</span>
+                  </div>
                 </div>
                 {/* Partner Time */}
                 <div>
@@ -1145,7 +1233,7 @@ function ChatPageInner() {
                 const weakElements = isAssistant ? getWeakOhang(msg.content) : [];
 
                 return (
-                  <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"} animate-[fadeInUp_0.4s_ease-out]`}>
+                  <div key={i} ref={msg.role === "user" ? lastUserMsgRef : undefined} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"} animate-[fadeInUp_0.4s_ease-out]`}>
                     <div className={`${msg.role === "user" ? "max-w-[75%]" : "max-w-[90%]"}`}>
                       <div className={`rounded-2xl px-5 py-4 text-sm`}
                         style={{
