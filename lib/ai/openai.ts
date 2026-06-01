@@ -1,6 +1,11 @@
 import OpenAI from "openai";
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+// 호출당 최대 45초 대기 후 실패 처리(무한 대기 방지). 1회 자동 재시도.
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+  timeout: 45_000,
+  maxRetries: 1,
+});
 
 export async function analyzeWithGPT(
   systemPrompt: string,

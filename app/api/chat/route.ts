@@ -4,6 +4,11 @@ import { createClient as createServerSupabase } from "@/lib/supabase/server";
 import { runAnalysisPipeline, handleFollowUp } from "@/lib/ai/pipeline";
 import { getSystemPrompt, type AnalysisDepth } from "@/lib/ai/prompts";
 
+// GPT-4o 사주 분석은 10~30초가 걸린다. Vercel 기본 10초 제한에 걸려
+// 응답이 잘리지 않도록 함수 최대 실행시간을 늘린다. 동적 라우트로 고정.
+export const maxDuration = 60;
+export const dynamic = "force-dynamic";
+
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!

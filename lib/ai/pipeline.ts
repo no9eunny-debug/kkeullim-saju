@@ -103,12 +103,15 @@ export async function runAnalysisPipeline(
   const currentDateStr = `${today.getFullYear()}년 ${today.getMonth() + 1}월 ${today.getDate()}일`;
   const userMessage = `[현재 날짜: ${currentDateStr} (${today.getFullYear()}년)]\n\n${sajuText}${partnerText}\n\n위 사주 정보를 바탕으로 분석해주세요.`;
 
-  // 2. GPT-4o 단독 분석 (Gemini/Groq 제거 — 한국어 사주 분석 품질 최상)
+  // 2. 분석 깊이에 따라 모델 선택.
+  // summary(게스트·무료)는 gpt-4o-mini로 충분하고 2~3배 빠르다.
+  // detailed·premium(유료)만 품질 최상의 gpt-4o를 사용한다.
+  const model = input.depth === "summary" ? "gpt-4o-mini" : "gpt-4o";
   let finalResult: string;
   try {
-    finalResult = await analyzeWithGPT(systemPrompt, userMessage, conversationHistory);
+    finalResult = await analyzeWithGPT(systemPrompt, userMessage, conversationHistory, model);
   } catch (err: any) {
-    console.error("[pipeline] GPT-4o failed:", err);
+    console.error(`[pipeline] ${model} failed:`, err);
     if (err?.status === 429 || err?.message?.includes("quota")) {
       throw new Error("AI 분석 크레딧이 소진되었어요. 관리자에게 문의해주세요.");
     }
