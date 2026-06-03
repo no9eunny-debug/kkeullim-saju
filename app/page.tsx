@@ -445,7 +445,7 @@ function Footer() {
   );
 }
 
-/* ─────────── Season Banner (5월 가정의 달) ─────────── */
+/* ─────────── Promo Banner (상시 인기 운세) ─────────── */
 function SeasonBanner() {
   return (
     <section className="px-5 -mt-8 mb-4 relative z-10">
@@ -454,7 +454,7 @@ function SeasonBanner() {
           className="rounded-2xl p-6 sm:p-8 relative overflow-hidden"
           style={{ background: "linear-gradient(135deg, #F8BBD0 0%, #CE93D8 50%, #B39DDB 100%)" }}>
           <div className="relative z-10">
-            <p className="text-xs font-bold text-white/80 mb-2">5월 가정의 달 특별 운세</p>
+            <p className="text-xs font-bold text-white/80 mb-2">지금 가장 인기 있는 운세</p>
             <h3 className="text-lg sm:text-xl font-black text-white mb-3 leading-snug">
               결혼운 &middot; 연애운<br className="sm:hidden" /> 분석해보세요
             </h3>
@@ -477,7 +477,7 @@ function SeasonBanner() {
   );
 }
 
-/* ─────────── Season Popup (하루 1회) ─────────── */
+/* ─────────── Promo Popup (하루 1회) ─────────── */
 function SeasonPopup() {
   const [show, setShow] = useState(false);
 
@@ -505,10 +505,10 @@ function SeasonPopup() {
         <button onClick={close} className="absolute top-4 right-4 p-1 rounded-full transition-colors hover:bg-black/10">
           <X className="w-5 h-5" style={{ color: "#6B7684" }} />
         </button>
-        <p className="text-4xl mb-4">&#x1F338;</p>
-        <h3 className="text-xl font-black mb-2" style={{ color: "#191F28" }}>5월 한정!</h3>
+        <p className="text-4xl mb-4">&#x1F495;</p>
+        <h3 className="text-xl font-black mb-2" style={{ color: "#191F28" }}>오늘의 추천 운세</h3>
         <p className="text-sm mb-6 leading-relaxed" style={{ color: "#4E5968" }}>
-          가정의 달을 맞아<br />결혼운 &middot; 연애운 무료 분석
+          지금 가장 인기 있는<br />결혼운 &middot; 연애운 무료 분석
         </p>
         <div className="flex flex-col gap-2">
           <button onClick={() => { close(); window.location.href = "/chat?category=marriage"; }}

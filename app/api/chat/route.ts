@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { createClient as createServerSupabase } from "@/lib/supabase/server";
 import { runAnalysisPipeline, handleFollowUp } from "@/lib/ai/pipeline";
-import { getSystemPrompt, type AnalysisDepth } from "@/lib/ai/prompts";
+import { getSystemPrompt, HOOK_INSTRUCTION, type AnalysisDepth } from "@/lib/ai/prompts";
 
 // GPT-4o 사주 분석은 10~30초가 걸린다. Vercel 기본 10초 제한에 걸려
 // 응답이 잘리지 않도록 함수 최대 실행시간을 늘린다. 동적 라우트로 고정.
@@ -102,6 +102,11 @@ export async function POST(req: Request) {
       systemPrompt += `\n\n## 사용자 닉네임 (필수)\n이 사람의 닉네임은 "${nickname}"이에요. 반드시 "${nickname}님"이라고 불러주세요.\n- "이 사람", "이 분" 같은 3인칭 절대 금지. 반드시 "${nickname}님"으로.\n- 첫 문장, 중간 전환, 마무리에서 "${nickname}님"을 사용하세요.\n- 예: "${nickname}님의 사주를 보면요~", "${nickname}님은 진짜~", "정리하면 ${nickname}님의 강점은~"`;
     } else {
       systemPrompt += `\n\n## 호칭 규칙 (필수)\n"이 사람", "이 분" 같은 3인칭 표현 절대 금지. 2인칭으로 직접 대화하듯이 말하세요. "사주를 보니까요~", "사주 주인공분은~" 식으로 자연스럽게.`;
+    }
+
+    // 최초 분석에만 "한 줄 후킹" 지시 추가 (후속 질문 제외)
+    if (!isFollowUp) {
+      systemPrompt += `\n\n${HOOK_INSTRUCTION}`;
     }
 
     let result: string;

@@ -30,15 +30,15 @@ const MBTI_TYPES = [
 ];
 
 const CATEGORIES = [
-  { key: "basic", label: "기본 사주풀이", emoji: "🔮" },
-  { key: "yearly", label: "올해 운세", emoji: "📅" },
-  { key: "love", label: "연애·궁합", emoji: "💕" },
-  { key: "marriage", label: "결혼운", emoji: "💍" },
-  { key: "reunion", label: "재회운", emoji: "🔄" },
-  { key: "wealth", label: "재물운", emoji: "💰" },
-  { key: "career", label: "직업·적성", emoji: "💼" },
-  { key: "health", label: "건강운", emoji: "🏥" },
-  { key: "lucky-items", label: "행운 아이템", emoji: "✨" },
+  { key: "basic", label: "기본 사주풀이", emoji: "🔮", teaser: "타고난 진짜 성격, 한 줄로" },
+  { key: "yearly", label: "올해 운세", emoji: "📅", teaser: "올해 나한테 무슨 일이?" },
+  { key: "love", label: "연애·궁합", emoji: "💕", teaser: "내가 밀당 못하는 이유" },
+  { key: "marriage", label: "결혼운", emoji: "💍", teaser: "내 배우자는 어떤 사람?" },
+  { key: "reunion", label: "재회운", emoji: "🔄", teaser: "그 사람과 다시 될까?" },
+  { key: "wealth", label: "재물운", emoji: "💰", teaser: "돈이 안 모이는 진짜 이유" },
+  { key: "career", label: "직업·적성", emoji: "💼", teaser: "나한테 숨은 직업 재능" },
+  { key: "health", label: "건강운", emoji: "🏥", teaser: "내 몸이 약한 곳은 어디?" },
+  { key: "lucky-items", label: "행운 아이템", emoji: "✨", teaser: "올해 내 행운의 색·숫자" },
 ];
 
 // 상대방 정보가 필요할 수 있는 카테고리
@@ -358,6 +358,41 @@ function MessageContent({ content }: { content: string }) {
         // 일반 문단
         return <p key={i} className="leading-[1.8]">{rendered}</p>;
       })}
+    </div>
+  );
+}
+
+// AI 응답 맨 앞의 "한줄요약:" / "태그:" 마커를 분리 (후킹 카드용)
+function parseHook(content: string): { hook: string; tag: string; body: string } {
+  const lines = content.split("\n");
+  let hook = "";
+  let tag = "";
+  const bodyLines: string[] = [];
+  for (const line of lines) {
+    const t = line.trim();
+    const hookM = t.match(/^한\s*줄\s*요약\s*[:：]\s*(.+)$/);
+    const tagM = t.match(/^태\s*그\s*[:：]\s*(.+)$/);
+    if (hookM && !hook) { hook = hookM[1].replace(/^["'“”]+|["'“”]+$/g, "").replace(/\*\*/g, "").trim(); continue; }
+    if (tagM && !tag) { tag = tagM[1].replace(/\*\*/g, "").trim(); continue; }
+    bodyLines.push(line);
+  }
+  return { hook, tag, body: bodyLines.join("\n").trim() };
+}
+
+// 결과 맨 위 "한 줄 후킹" 카드
+function HookCard({ hook, tag }: { hook: string; tag: string }) {
+  return (
+    <div className="mb-3 rounded-2xl p-6 relative overflow-hidden animate-[fadeInUp_0.4s_ease-out]"
+      style={{ background: "linear-gradient(135deg, #4F46E5 0%, #3182F6 55%, #06B6D4 100%)", boxShadow: "0 8px 24px rgba(49,130,246,0.25)" }}>
+      <Sparkles className="w-6 h-6 mb-3" style={{ color: "rgba(255,255,255,0.95)" }} />
+      <p className="text-lg sm:text-xl font-black leading-snug text-white">
+        &ldquo;{hook}&rdquo;
+      </p>
+      {tag && (
+        <p className="mt-3 text-xs font-bold tracking-wide" style={{ color: "rgba(255,255,255,0.78)" }}>
+          {tag}
+        </p>
+      )}
     </div>
   );
 }
@@ -1045,8 +1080,11 @@ function ChatPageInner() {
                 <button key={cat.key} onClick={() => handleStartAnalysis(cat.key)}
                   className="flex items-center gap-3 p-5 rounded-2xl text-left transition-all hover:shadow-md hover:-translate-y-0.5"
                   style={{ backgroundColor: "#FFFFFF", border: "1px solid #E5E8EB" }}>
-                  <span className="text-2xl">{cat.emoji}</span>
-                  <span className="text-sm font-bold" style={{ color: "#191F28" }}>{cat.label}</span>
+                  <span className="text-2xl shrink-0">{cat.emoji}</span>
+                  <span className="min-w-0">
+                    <span className="block text-sm font-bold" style={{ color: "#191F28" }}>{cat.label}</span>
+                    <span className="block text-[11px] mt-0.5 leading-tight" style={{ color: "#8B95A1" }}>{cat.teaser}</span>
+                  </span>
                 </button>
               ))}
             </div>
@@ -1230,11 +1268,18 @@ function ChatPageInner() {
                 const isAssistant = msg.role === "assistant";
                 // 첫 분석 결과인지 확인 (이전 메시지가 system이거나 첫 메시지)
                 const isFirstAnalysis = isAssistant && (i === 0 || messages[i - 1]?.role === "system");
-                const weakElements = isAssistant ? getWeakOhang(msg.content) : [];
+                // 후킹 마커 분리 (모든 AI 응답에서 마커 제거, 카드는 첫 분석에만)
+                const parsed = isAssistant ? parseHook(msg.content) : null;
+                const bodyContent = parsed ? parsed.body : msg.content;
+                const weakElements = isAssistant ? getWeakOhang(bodyContent) : [];
 
                 return (
                   <div key={i} ref={msg.role === "user" ? lastUserMsgRef : undefined} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"} animate-[fadeInUp_0.4s_ease-out]`}>
                     <div className={`${msg.role === "user" ? "max-w-[75%]" : "max-w-[90%]"}`}>
+                      {/* 한 줄 후킹 카드 (첫 분석 + hook이 있을 때만) */}
+                      {isFirstAnalysis && parsed?.hook && (
+                        <HookCard hook={parsed.hook} tag={parsed.tag} />
+                      )}
                       <div className={`rounded-2xl px-5 py-4 text-sm`}
                         style={{
                           backgroundColor: msg.role === "user" ? "#3182F6" : "#FFFFFF",
@@ -1244,7 +1289,7 @@ function ChatPageInner() {
                           boxShadow: isAssistant ? "0 2px 8px rgba(0,0,0,0.04)" : "none",
                         }}>
                         {isAssistant ? (
-                          <MessageContent content={msg.content} />
+                          <MessageContent content={bodyContent} />
                         ) : (
                           msg.content
                         )}
