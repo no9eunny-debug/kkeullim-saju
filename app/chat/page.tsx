@@ -482,7 +482,12 @@ function ChatPageInner() {
       if (s.partnerSaju) setPartnerSaju(s.partnerSaju);
       if (s.sessionId) setSessionId(s.sessionId);
       if (s.analysisCount) setAnalysisCount(s.analysisCount);
-      if (s.step === "chatting" || s.step === "category") setStep(s.step);
+      // 채팅 결과 화면으로 바로 복원하지 않는다. 새로 들어오면 항상 "어떤 걸 볼지"(카테고리)
+      // 또는 정보입력부터 보여준다. 이전 대화는 카테고리 화면의 "이전 대화로 돌아가기"로 이어본다.
+      // (URL에 category가 있으면 자동분석 로직이 처리하므로 건드리지 않는다.)
+      if (!initialCategory && (s.step === "chatting" || s.step === "category")) {
+        if (s.mbti && s.birthDate && s.gender) setStep("category");
+      }
     } catch {}
   }, []);
 
@@ -651,14 +656,17 @@ function ChatPageInner() {
     setPartnerGender((profile.gender as "male" | "female") || "");
   };
 
-  // 자동 스크롤 — 새 메시지 추가 시 마지막 사용자 메시지 위치로 스크롤 (답변이 바로 보이도록)
+  // 자동 스크롤 — 새 분석/질문이 시작되면 그 위치(로딩)가 화면 상단에 바로 보이도록
   const lastUserMsgRef = useRef<HTMLDivElement>(null);
+  const loadingRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    if (messages.length === 0) return;
     const lastMsg = messages[messages.length - 1];
-    // 사용자 메시지 추가 직후 or 로딩 시작 시 → 사용자 메시지를 상단에 표시
-    if (lastMsg?.role === "user" || loading) {
+    if (lastMsg?.role === "user") {
+      // 후속 질문: 내 질문을 상단에 표시
       lastUserMsgRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    } else if (loading) {
+      // 카테고리 선택 등으로 새 분석 시작 → 로딩 화면을 바로 상단에 보여준다
+      requestAnimationFrame(() => loadingRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }));
     }
   }, [messages, loading]);
 
@@ -1467,7 +1475,7 @@ function ChatPageInner() {
 
               {/* Loading */}
               {loading && (
-                <div className="flex justify-start">
+                <div ref={loadingRef} className="flex justify-start scroll-mt-4">
                   <div className="rounded-2xl px-5 py-4 text-sm" style={{ backgroundColor: "#FFFFFF", border: "1px solid #E5E8EB" }}>
                     <div className="flex items-center gap-2 mb-2">
                       <span className="inline-flex gap-1">
