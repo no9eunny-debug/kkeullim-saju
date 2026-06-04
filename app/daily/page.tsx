@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Sparkles, ArrowLeft, ArrowRight, Sun, Moon, User, Share2, Compass, Star as StarIcon } from "lucide-react";
+import { Sparkles, ArrowLeft, ArrowRight, Sun, Moon, User, Share2, Compass } from "lucide-react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 
@@ -110,21 +110,19 @@ export default function DailyPage() {
   const [animated, setAnimated] = useState(false);
   const [savedProfiles, setSavedProfiles] = useState<SavedProfile[]>([]);
   const [activeProfileName, setActiveProfileName] = useState<string | null>(null);
-  const [luckyPoints, setLuckyPoints] = useState(0);
-  const [bonusEarned, setBonusEarned] = useState(false);
+  const [streak, setStreak] = useState(0);
+  const [streakRewardEarned, setStreakRewardEarned] = useState(false);
 
-  // 행운 포인트 로드
+  // 연속 출석 로드
   useEffect(() => {
     try {
-      const today = new Date().toISOString().slice(0, 10);
-      const pts = parseInt(localStorage.getItem("saju_lucky_points") || "0", 10);
-      const ptsDate = localStorage.getItem("saju_lucky_points_date");
-      // 날짜 바뀌면 리셋
-      if (ptsDate !== today) {
-        setLuckyPoints(0);
-      } else {
-        setLuckyPoints(pts);
-      }
+      const s = parseInt(localStorage.getItem("saju_streak") || "0", 10);
+      const lastDate = localStorage.getItem("saju_streak_date");
+      const todayStr = new Date().toISOString().slice(0, 10);
+      const y = new Date(); y.setDate(y.getDate() - 1);
+      const yStr = y.toISOString().slice(0, 10);
+      // 어제 또는 오늘 출석했으면 연속 유지, 아니면 끊긴 것으로 0 표시(실제 갱신은 다음 출석 때)
+      setStreak(lastDate === todayStr || lastDate === yStr ? s : 0);
     } catch {}
   }, []);
 
@@ -207,23 +205,23 @@ export default function DailyPage() {
         alert(data.error);
       } else {
         setResult(data);
-        // 행운 포인트 적립 (하루 1회)
+        // 연속 출석 갱신 (하루 1회) + 7일마다 심층 분석권 보상
         try {
-          const today = new Date().toISOString().slice(0, 10);
-          const ptsDate = localStorage.getItem("saju_lucky_points_date");
-          if (ptsDate !== today) {
-            const prev = parseInt(localStorage.getItem("saju_lucky_points") || "0", 10);
-            const newPts = prev + 1;
-            localStorage.setItem("saju_lucky_points_date", today);
-            if (newPts >= 3) {
-              const bonus = parseInt(localStorage.getItem("saju_bonus_questions") || "0", 10);
-              localStorage.setItem("saju_bonus_questions", String(bonus + 1));
-              localStorage.setItem("saju_lucky_points", "0");
-              setLuckyPoints(0);
-              setBonusEarned(true);
-            } else {
-              localStorage.setItem("saju_lucky_points", String(newPts));
-              setLuckyPoints(newPts);
+          const todayStr = new Date().toISOString().slice(0, 10);
+          const lastDate = localStorage.getItem("saju_streak_date");
+          if (lastDate !== todayStr) {
+            const y = new Date(); y.setDate(y.getDate() - 1);
+            const yStr = y.toISOString().slice(0, 10);
+            const prev = parseInt(localStorage.getItem("saju_streak") || "0", 10);
+            const next = lastDate === yStr ? prev + 1 : 1;
+            localStorage.setItem("saju_streak", String(next));
+            localStorage.setItem("saju_streak_date", todayStr);
+            setStreak(next);
+            // 7일마다 심층 분석권 1장 지급
+            if (next > 0 && next % 7 === 0) {
+              const t = parseInt(localStorage.getItem("saju_premium_tickets") || "0", 10);
+              localStorage.setItem("saju_premium_tickets", String(t + 1));
+              setStreakRewardEarned(true);
             }
           }
         } catch {}
@@ -291,9 +289,9 @@ export default function DailyPage() {
           </div>
           <div className="flex items-center gap-2">
             <div className="flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-bold"
-              style={{ backgroundColor: "#FFF8E1", color: "#F59E0B", border: "1px solid #FDE68A" }}>
-              <StarIcon className="w-3.5 h-3.5 fill-yellow-400 text-yellow-400" />
-              {luckyPoints}/3
+              style={{ backgroundColor: "#FFF3E0", color: "#F97316", border: "1px solid #FED7AA" }}>
+              <span>🔥</span>
+              {streak}일 연속
             </div>
             <Link
               href="/chat"
@@ -407,18 +405,25 @@ export default function DailyPage() {
         {/* ── 결과 ── */}
         {result && !loading && (
           <div className="space-y-6 pb-8">
-            {/* 질문권 획득 배너 */}
-            {bonusEarned && (
+            {/* 7일 출석 보상 배너 */}
+            {streakRewardEarned && (
               <div className="rounded-2xl p-5 text-center"
                 style={{ background: "linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%)", border: "1px solid #F59E0B" }}>
                 <p className="text-2xl mb-2">&#x1F389;</p>
-                <p className="text-sm font-black" style={{ color: "#92400E" }}>질문권 1회 획득!</p>
-                <p className="text-xs mt-1" style={{ color: "#A16207" }}>사주 분석에서 사용하세요</p>
-                <button onClick={() => setBonusEarned(false)}
-                  className="mt-3 text-xs font-medium px-4 py-1.5 rounded-full"
-                  style={{ backgroundColor: "rgba(146,64,14,0.1)", color: "#92400E" }}>
-                  확인
-                </button>
+                <p className="text-sm font-black" style={{ color: "#92400E" }}>7일 연속 출석 달성!</p>
+                <p className="text-xs mt-1" style={{ color: "#A16207" }}>심층 분석권 1장을 받았어요. 사주 분석을 더 깊게 받아보세요</p>
+                <div className="flex gap-2 mt-3 justify-center">
+                  <button onClick={() => router.push("/chat")}
+                    className="text-xs font-bold px-4 py-1.5 rounded-full text-white"
+                    style={{ backgroundColor: "#F59E0B" }}>
+                    분석하러 가기
+                  </button>
+                  <button onClick={() => setStreakRewardEarned(false)}
+                    className="text-xs font-medium px-4 py-1.5 rounded-full"
+                    style={{ backgroundColor: "rgba(146,64,14,0.1)", color: "#92400E" }}>
+                    닫기
+                  </button>
+                </div>
               </div>
             )}
             {/* 날짜 */}
@@ -433,6 +438,26 @@ export default function DailyPage() {
                   일주: {result.ilju} | {result.tti}띠 | 오행: {result.dominantElement}
                 </p>
               )}
+            </div>
+
+            {/* 연속 출석 트래커 */}
+            <div className="rounded-2xl p-5" style={{ ...fade(0.05), backgroundColor: "#FFFFFF", border: "1px solid #E5E8EB" }}>
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-sm font-bold" style={{ color: "#191F28" }}>
+                  <span className="mr-1">🔥</span>{streak}일 연속 출석 중
+                </p>
+                <p className="text-[11px] font-medium" style={{ color: "#8B95A1" }}>7일 채우면 심층분석권 🎟</p>
+              </div>
+              <div className="flex gap-1.5">
+                {Array.from({ length: 7 }).map((_, i) => {
+                  const cycle = streak % 7 === 0 && streak > 0 ? 7 : streak % 7;
+                  const filled = i < cycle;
+                  return (
+                    <div key={i} className="flex-1 h-2.5 rounded-full transition-all"
+                      style={{ backgroundColor: filled ? "#F97316" : "#F2F4F6" }} />
+                  );
+                })}
+              </div>
             </div>
 
             {/* 점수 게이지 */}

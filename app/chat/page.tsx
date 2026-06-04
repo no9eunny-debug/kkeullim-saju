@@ -442,6 +442,12 @@ function ChatPageInner() {
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [analysisCount, setAnalysisCount] = useState(0);
+  // 출석 보상 '심층 분석권'
+  const [premiumTickets, setPremiumTickets] = useState(0);
+  const [useTicket, setUseTicket] = useState(true);
+  useEffect(() => {
+    try { setPremiumTickets(parseInt(localStorage.getItem("saju_premium_tickets") || "0", 10)); } catch {}
+  }, []);
   const [sajuData, setSajuData] = useState<{
     ilju: string; ohang: Record<string, number>;
     yearPillar?: { gan: string; ji: string };
@@ -695,6 +701,7 @@ function ChatPageInner() {
   // API 호출
   const callAnalysis = useCallback(async (cat: string, extraParams: Record<string, any> = {}) => {
     setLoading(true);
+    const ticketUsed = premiumTickets > 0 && useTicket;
     try {
       const res = await fetch("/api/chat", {
         method: "POST",
@@ -708,6 +715,7 @@ function ChatPageInner() {
           category: cat,
           userId: userId || undefined,
           guestId: userId ? undefined : getGuestId(),
+          usePremiumTicket: ticketUsed,
           ...extraParams,
         }),
       });
@@ -715,6 +723,12 @@ function ChatPageInner() {
       if (data.error) {
         setMessages(prev => [...prev, { role: "assistant", content: data.message || data.error }]);
       } else {
+        // 분석권 사용 성공 → 1장 차감
+        if (ticketUsed) {
+          const left = Math.max(0, premiumTickets - 1);
+          try { localStorage.setItem("saju_premium_tickets", String(left)); } catch {}
+          setPremiumTickets(left);
+        }
         setMessages(prev => [...prev, { role: "assistant", content: data.result }]);
         if (data.sessionId) setSessionId(data.sessionId);
         if (data.saju) setSajuData({
@@ -733,7 +747,7 @@ function ChatPageInner() {
       setMessages(prev => [...prev, { role: "assistant", content: "네트워크 오류가 발생했어요. 잠시 후 다시 시도해주세요." }]);
     }
     setLoading(false);
-  }, [mbti, birthDate, birthTime, birthTimeUnknown, gender, userId]);
+  }, [mbti, birthDate, birthTime, birthTimeUnknown, gender, userId, premiumTickets, useTicket]);
 
   // 분석 시작
   const handleStartAnalysis = (cat: string) => {
@@ -1083,6 +1097,23 @@ function ChatPageInner() {
               <h1 className="text-2xl font-black mb-2" style={{ color: "#191F28" }}>무엇이 궁금하세요?</h1>
               <p className="text-sm" style={{ color: "#8B95A1" }}>{mbti} · {birthDate} · {gender === "female" ? "여성" : "남성"}</p>
             </div>
+
+            {/* 심층 분석권 사용 토글 (출석 보상 보유 시) */}
+            {premiumTickets > 0 && (
+              <button onClick={() => setUseTicket(v => !v)}
+                className="w-full flex items-center gap-3 p-4 rounded-2xl text-left transition-all"
+                style={{ backgroundColor: useTicket ? "#FFF7ED" : "#F8FAFB", border: useTicket ? "2px solid #F97316" : "1px solid #E5E8EB" }}>
+                <span className="text-2xl shrink-0">🎟</span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold" style={{ color: "#191F28" }}>심층 분석권 {premiumTickets}장 보유</p>
+                  <p className="text-xs" style={{ color: "#6B7684" }}>{useTicket ? "이번 분석을 더 깊게 받아요 (1장 사용)" : "탭하면 이번 분석에 사용해요"}</p>
+                </div>
+                <div className="w-10 h-6 rounded-full p-0.5 shrink-0 transition-all" style={{ backgroundColor: useTicket ? "#F97316" : "#D1D5DB" }}>
+                  <div className="w-5 h-5 rounded-full bg-white transition-transform" style={{ transform: useTicket ? "translateX(16px)" : "translateX(0)" }} />
+                </div>
+              </button>
+            )}
+
             <div className="grid grid-cols-2 gap-3">
               {CATEGORIES.map(cat => (
                 <button key={cat.key} onClick={() => handleStartAnalysis(cat.key)}

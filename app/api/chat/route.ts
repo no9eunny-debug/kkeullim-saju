@@ -36,6 +36,7 @@ export async function POST(req: Request) {
       mbti, birthDate, birthTime, gender, category, nickname,
       partnerMbti, partnerBirthDate, partnerBirthTime, partnerGender,
       userId: clientUserId, guestId, sessionId, message, isFollowUp,
+      usePremiumTicket,
     } = body;
 
     // 서버 측 세션에서 userId 확인 (클라이언트 전송값보다 우선)
@@ -94,7 +95,9 @@ export async function POST(req: Request) {
       }
     }
 
-    const depth = getDepth(plan);
+    let depth = getDepth(plan);
+    // 출석 보상 '심층 분석권' 사용 시 무료(summary)를 상세(detailed)로 한 단계 업그레이드
+    if (usePremiumTicket && depth === "summary") depth = "detailed";
     let systemPrompt = getSystemPrompt(category, depth);
 
     // 닉네임이 있으면 시스템 프롬프트에 추가
