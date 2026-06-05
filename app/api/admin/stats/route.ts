@@ -6,7 +6,7 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
-const ADMIN_KEY = process.env.ADMIN_DASHBOARD_KEY || "kkeullim2026";
+const ADMIN_KEY = process.env.ADMIN_DASHBOARD_KEY || "tkwn1060";
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
