@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import {
   Users, MessageSquare, TrendingUp, BarChart3, ArrowLeft,
-  RefreshCw, Eye, UserCheck, UserX,
+  RefreshCw, Eye, UserCheck, UserX, Footprints, Sun,
 } from "lucide-react";
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -39,11 +39,17 @@ interface Stats {
     totalMessages: number;
     memberSessions: number;
     guestSessions: number;
+    todayVisitors: number;
+    visitors30d: number;
+    todayDailyViews: number;
+    dailyViews30d: number;
   };
   categoryStats: { name: string; count: number }[];
   mbtiStats: { name: string; count: number }[];
   dailyTrend: { date: string; count: number }[];
   dailyUsers: { date: string; count: number }[];
+  dailyVisitors: { date: string; count: number }[];
+  dailyViewsTrend: { date: string; count: number }[];
   recentSessions: {
     id: string;
     category: string;
@@ -168,7 +174,7 @@ export default function AdminDashboard() {
 
   if (!stats) return null;
 
-  const { overview, categoryStats, mbtiStats, dailyTrend, dailyUsers, recentSessions } = stats;
+  const { overview, categoryStats, mbtiStats, dailyTrend, dailyUsers, dailyVisitors, dailyViewsTrend, recentSessions } = stats;
   const totalCategorySessions = categoryStats.reduce((s, c) => s + c.count, 0) || 1;
 
   return (
@@ -221,6 +227,32 @@ export default function AdminDashboard() {
           />
         </div>
 
+        {/* 방문/운세 카드 (신규) */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <Card
+            icon={<Footprints className="w-5 h-5 text-rose-500" />}
+            label="오늘 방문자"
+            value={overview.todayVisitors}
+            sub="기기 기준 (하루 1회)"
+          />
+          <Card
+            icon={<Footprints className="w-5 h-5 text-rose-400" />}
+            label="방문자 (30일)"
+            value={overview.visitors30d}
+          />
+          <Card
+            icon={<Sun className="w-5 h-5 text-orange-500" />}
+            label="오늘의 운세 (오늘)"
+            value={overview.todayDailyViews}
+            sub="오늘 조회 수"
+          />
+          <Card
+            icon={<Sun className="w-5 h-5 text-orange-400" />}
+            label="오늘의 운세 (30일)"
+            value={overview.dailyViews30d}
+          />
+        </div>
+
         {/* Charts Row */}
         <div className="grid md:grid-cols-2 gap-4">
           <div className="bg-white rounded-2xl p-5 shadow-sm">
@@ -233,8 +265,22 @@ export default function AdminDashboard() {
           <div className="bg-white rounded-2xl p-5 shadow-sm">
             <BarChartSimple
               data={dailyUsers}
-              label="일별 이용자 수 (최근 14일)"
+              label="일별 이용자 수 (분석+운세, 최근 14일)"
               color="#3B82F6"
+            />
+          </div>
+          <div className="bg-white rounded-2xl p-5 shadow-sm">
+            <BarChartSimple
+              data={dailyVisitors}
+              label="일별 방문자 수 (최근 14일)"
+              color="#F43F5E"
+            />
+          </div>
+          <div className="bg-white rounded-2xl p-5 shadow-sm">
+            <BarChartSimple
+              data={dailyViewsTrend}
+              label="일별 오늘의 운세 조회 (최근 14일)"
+              color="#F97316"
             />
           </div>
         </div>

@@ -69,10 +69,10 @@ export async function GET(req: Request) {
       .select("id, category, mbti, gender, birth_date, created_at, user_id, guest_id, analysis_depth")
       .order("created_at", { ascending: false })
       .limit(20),
-    // usage_logs (최근 30일)
+    // usage_logs (최근 30일) — action으로 분석/운세/방문 구분
     supabaseAdmin
       .from("usage_logs")
-      .select("user_id, guest_id, created_at")
+      .select("user_id, guest_id, created_at, action")
       .gte("created_at", `${last30[0]}T00:00:00+09:00`),
     // 일별 세션 (최근 30일)
     supabaseAdmin
@@ -126,22 +126,49 @@ export async function GET(req: Request) {
     count: dailyMap[date],
   }));
 
-  // 일별 사용자 (usage_logs 기반 - unique users per day)
-  const dailyUsersMap: Record<string, Set<string>> = {};
-  last30.forEach((d) => (dailyUsersMap[d] = new Set()));
-  (usageLogsRes.data || []).forEach((l: any) => {
-    const d = new Date(l.created_at);
-    const kst = new Date(d.getTime() + 9 * 60 * 60 * 1000)
-      .toISOString()
-      .slice(0, 10);
-    const uid = l.user_id || l.guest_id || "anon";
-    if (dailyUsersMap[kst]) dailyUsersMap[kst].add(uid);
+  // usage_logs 기반 일별 집계 (이용자 / 방문자 / 오늘의 운세)
+  const kstOf = (ts: string) =>
+    new Date(new Date(ts).getTime() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10);
+
+  const dailyUsersMap: Record<string, Set<string>> = {};   // 실제 이용(분석+운세)
+  const dailyVisitorsMap: Record<string, Set<string>> = {}; // 방문(visit)
+  const dailyViewMap: Record<string, number> = {};          // 오늘의 운세 조회수
+  last30.forEach((d) => {
+    dailyUsersMap[d] = new Set();
+    dailyVisitorsMap[d] = new Set();
+    dailyViewMap[d] = 0;
   });
 
-  const dailyUsers = last30.map((date) => ({
-    date: date.slice(5),
-    count: dailyUsersMap[date].size,
-  }));
+  const logs = usageLogsRes.data || [];
+  const visitorSet30 = new Set<string>();
+  let dailyViews30 = 0;
+  let todayVisitorsCount = 0;
+  let todayDailyViews = 0;
+  const todayVisitorSet = new Set<string>();
+
+  logs.forEach((l: any) => {
+    const kst = kstOf(l.created_at);
+    const uid = l.user_id || l.guest_id || "anon";
+    const action = l.action || "analysis";
+    if (action === "visit") {
+      if (dailyVisitorsMap[kst]) dailyVisitorsMap[kst].add(uid);
+      visitorSet30.add(uid);
+      if (kst === todayKST) todayVisitorSet.add(uid);
+    } else {
+      // 분석 + 오늘의 운세 = 실제 이용자
+      if (dailyUsersMap[kst]) dailyUsersMap[kst].add(uid);
+      if (action === "daily") {
+        if (dailyViewMap[kst] !== undefined) dailyViewMap[kst]++;
+        dailyViews30++;
+        if (kst === todayKST) todayDailyViews++;
+      }
+    }
+  });
+  todayVisitorsCount = todayVisitorSet.size;
+
+  const dailyUsers = last30.map((date) => ({ date: date.slice(5), count: dailyUsersMap[date].size }));
+  const dailyVisitors = last30.map((date) => ({ date: date.slice(5), count: dailyVisitorsMap[date].size }));
+  const dailyViewsTrend = last30.map((date) => ({ date: date.slice(5), count: dailyViewMap[date] }));
 
   return NextResponse.json({
     overview: {
@@ -152,11 +179,18 @@ export async function GET(req: Request) {
       totalMessages: totalMessagesRes.count || 0,
       memberSessions: memberCount,
       guestSessions: guestCount,
+      // 신규: 방문자(visit) / 오늘의 운세(daily) — 최근 30일 기준
+      todayVisitors: todayVisitorsCount,
+      visitors30d: visitorSet30.size,
+      todayDailyViews,
+      dailyViews30d: dailyViews30,
     },
     categoryStats,
     mbtiStats,
     dailyTrend,
     dailyUsers,
+    dailyVisitors,
+    dailyViewsTrend,
     recentSessions: recentSessionsRes.data || [],
   });
 }

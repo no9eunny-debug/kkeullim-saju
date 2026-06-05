@@ -1,5 +1,12 @@
 import { NextResponse } from "next/server";
+import { createClient } from "@supabase/supabase-js";
+import { createClient as createServerSupabase } from "@/lib/supabase/server";
 import { calculateSaju, type SajuResult } from "@/lib/saju/manseryeok";
+
+const supabaseAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
 
 function getDailySeed(): string {
   const today = new Date();
@@ -251,10 +258,25 @@ function teaser(sipsung: string, shinsals: string[], chung: boolean, mbti: strin
 // ═══════════════════════════════════════════════════════════
 export async function POST(req: Request) {
   try {
-    const { birthDate, birthTime, gender, mbti } = await req.json();
+    const { birthDate, birthTime, gender, mbti, guestId } = await req.json();
     if (!birthDate) {
       return NextResponse.json({ error: "생년월일이 필요해요." }, { status: 400 });
     }
+
+    // 사용량 기록 (오늘의 운세 조회) — 통계용, 실패해도 무시
+    try {
+      let uid: string | null = null;
+      try {
+        const sb = await createServerSupabase();
+        const { data: { user } } = await sb.auth.getUser();
+        uid = user?.id || null;
+      } catch {}
+      await supabaseAdmin.from("usage_logs").insert({
+        user_id: uid,
+        guest_id: guestId || null,
+        action: "daily",
+      });
+    } catch {}
 
     const userSaju = calculateSaju(birthDate, birthTime || null, gender || "female");
     const todaySaju = calculateSaju(getDailySeed(), null, gender || "female");

@@ -195,10 +195,16 @@ export default function DailyPage() {
     }
 
     try {
+      // 게스트 ID (통계용)
+      let guestId = "";
+      try {
+        guestId = localStorage.getItem("guest_id") || "";
+        if (!guestId) { guestId = crypto.randomUUID(); localStorage.setItem("guest_id", guestId); }
+      } catch {}
       const res = await fetch("/api/daily", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ birthDate, mbti: mbti || null }),
+        body: JSON.stringify({ birthDate, mbti: mbti || null, guestId: guestId || undefined }),
       });
       const data = await res.json();
       if (data.error) {

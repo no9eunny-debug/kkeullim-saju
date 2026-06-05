@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
+import VisitTracker from "./VisitTracker";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://kkeullim-saju.vercel.app"),
@@ -54,6 +55,7 @@ export default function RootLayout({
         style={{ fontFamily: "'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, sans-serif" }}
       >
         {children}
+        <VisitTracker />
         <Analytics />
       </body>
     </html>
