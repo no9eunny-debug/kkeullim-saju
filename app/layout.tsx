@@ -14,7 +14,6 @@ export const metadata: Metadata = {
       "MBTI와 사주를 결합한 AI 맞춤 분석. 만세력 기반 정확한 사주 데이터와 AI가 풀어주는 나만의 운명 이야기.",
     url: "https://kkeullim-saju.vercel.app",
     siteName: "합리적 미신",
-    images: [{ url: "/og-image.png", width: 1200, height: 630, alt: "합리적 미신 — MBTI × 사주 AI 분석" }],
     locale: "ko_KR",
     type: "website",
   },
@@ -22,7 +21,6 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "합리적 미신 — MBTI × 사주로 보는 나의 운명",
     description: "MBTI와 사주를 결합한 AI 맞춤 분석. 나만의 운명 이야기를 확인해보세요.",
-    images: ["/og-image.png"],
   },
 };
 

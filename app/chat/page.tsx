@@ -1533,6 +1533,28 @@ function ChatPageInner() {
                 </div>
               )}
 
+              {/* 회원가입 유도 (비회원만) */}
+              {!loading && !userId && messages.length > 0 && analysisCount > 0 && (
+                <div className="animate-[fadeInUp_0.6s_ease-out]">
+                  <div className="rounded-2xl p-5" style={{ backgroundColor: "#FFFFFF", border: "1px solid #E5E8EB" }}>
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: "#EBF4FF" }}>
+                        <UserCircle className="w-5 h-5" style={{ color: "#3182F6" }} />
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm font-bold" style={{ color: "#191F28" }}>이 결과, 로그인하면 저장돼요</p>
+                        <p className="text-xs mt-0.5" style={{ color: "#6B7684" }}>분석 기록 보관 + 무료 분석 하루 3회 → 7회로 늘어나요</p>
+                      </div>
+                    </div>
+                    <button onClick={() => { window.location.href = "/login"; }}
+                      className="w-full py-3 rounded-xl text-sm font-bold text-white transition-all hover:scale-[1.01]"
+                      style={{ backgroundColor: "#3182F6" }}>
+                      3초 만에 카카오로 시작하기
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {/* 프리미엄 CTA 배너 */}
               {!loading && messages.length > 0 && analysisCount > 0 && (
                 <div className="animate-[fadeInUp_0.6s_ease-out]">
