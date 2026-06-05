@@ -2,9 +2,10 @@
 
 import { useState, useRef, useEffect, useCallback, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import { Sparkles, Send, ArrowLeft, Link2, Check, ChevronRight, UserPlus, Save, X, User, UserCircle, Share2, Crown } from "lucide-react";
+import { Sparkles, Send, ArrowLeft, Link2, Check, ChevronRight, UserPlus, Save, X, User, UserCircle, Share2, Crown, Heart } from "lucide-react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import { encodeInvite, decodeInvite } from "@/lib/share";
 import { LOADING_TIPS } from "@/lib/saju/loading-tips";
 import dynamic from "next/dynamic";
 
@@ -408,6 +409,9 @@ export default function ChatPage() {
 function ChatPageInner() {
   const searchParams = useSearchParams();
   const initialCategory = searchParams.get("category") || "";
+  // 궁합 초대 링크로 들어온 경우(초대자 정보)
+  const inviteParam = searchParams.get("invite") || "";
+  const inviter = inviteParam ? decodeInvite(inviteParam) : null;
   const [step, setStep] = useState<Step>("input");
   const [mbti, setMbti] = useState("");
   const [birthDate, setBirthDate] = useState("");
@@ -491,10 +495,27 @@ function ChatPageInner() {
       // 채팅 결과 화면으로 바로 복원하지 않는다. 새로 들어오면 항상 "어떤 걸 볼지"(카테고리)
       // 또는 정보입력부터 보여준다. 이전 대화는 카테고리 화면의 "이전 대화로 돌아가기"로 이어본다.
       // (URL에 category가 있으면 자동분석 로직이 처리하므로 건드리지 않는다.)
-      if (!initialCategory && (s.step === "chatting" || s.step === "category")) {
+      // 궁합 초대로 들어온 경우엔 복원하지 않고 '내 정보 입력'부터 보여준다.
+      if (!initialCategory && !inviter && (s.step === "chatting" || s.step === "category")) {
         if (s.mbti && s.birthDate && s.gender) setStep("category");
       }
     } catch {}
+  }, []);
+
+  // 궁합 초대 진입 시: 카테고리를 연애·궁합으로 고정하고 초대자를 상대방으로 세팅
+  const inviteAppliedRef = useRef(false);
+  useEffect(() => {
+    if (!inviter || inviteAppliedRef.current) return;
+    inviteAppliedRef.current = true;
+    setCategory("love");
+    setWantPartner(true);
+    setPartnerMbti(inviter.mbti || "");
+    setPartnerBirthDate(inviter.birthDate || "");
+    setPartnerBirthTime(inviter.birthTime || "");
+    setPartnerTimeUnknown(!inviter.birthTime);
+    setPartnerGender((inviter.gender as "male" | "female") || "");
+    setStep("input");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // sessionStorage 저장 (상태 변경 시마다)
@@ -837,6 +858,30 @@ function ChatPageInner() {
     setStep("category");
   };
 
+  // 궁합 초대 링크 공유 (내 정보를 담아서)
+  const [inviteCopied, setInviteCopied] = useState(false);
+  const handleInviteShare = async () => {
+    if (!mbti || !birthValid || !gender) return;
+    const token = encodeInvite({
+      mbti,
+      birthDate: birthDateFormatted,
+      birthTime: birthTimeUnknown ? null : birthTime || null,
+      gender,
+      nickname: nickname || "친구",
+    });
+    const url = `${window.location.origin}/chat?invite=${token}`;
+    const shareText = `[합리적 미신] ${nickname || "내"} 사주랑 너랑 궁합 보자! 💕\n${url}`;
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: "궁합 보기", text: shareText, url });
+      } else {
+        await navigator.clipboard.writeText(shareText);
+        setInviteCopied(true);
+        setTimeout(() => setInviteCopied(false), 2000);
+      }
+    } catch {}
+  };
+
   // 링크 복사
   const handleCopyLink = async () => {
     try {
@@ -901,6 +946,18 @@ function ChatPageInner() {
         {/* Step 1: Input */}
         {step === "input" && (
           <div className="space-y-8">
+            {/* 궁합 초대 배너 */}
+            {inviter && (
+              <div className="rounded-2xl p-5 text-center" style={{ background: "linear-gradient(135deg, #FCE4EC 0%, #F3E5F5 100%)", border: "1px solid #F8BBD0" }}>
+                <p className="text-3xl mb-2">💕</p>
+                <p className="text-base font-black" style={{ color: "#191F28" }}>
+                  {inviter.nickname || "누군가"}님이 궁합을 보고 싶어해요!
+                </p>
+                <p className="text-xs mt-1.5" style={{ color: "#6B7684" }}>
+                  내 정보만 입력하면 둘의 궁합 결과가 바로 나와요
+                </p>
+              </div>
+            )}
             <div className="text-center">
               <h1 className="text-2xl font-black mb-2" style={{ color: "#191F28" }}>내 정보 입력</h1>
               <p className="text-sm" style={{ color: "#8B95A1" }}>정확한 분석을 위해 아래 정보를 입력해주세요</p>
@@ -1075,16 +1132,25 @@ function ChatPageInner() {
                 </button>
               )}
               <button onClick={() => {
-                if (initialCategory) {
+                if (inviter) {
+                  // 궁합 초대: 내 정보 입력 후 바로 초대자와의 연애·궁합 분석
+                  if (!nickname.trim()) setNickname("나");
+                  startChatting("love", {
+                    partnerMbti: inviter.mbti || null,
+                    partnerBirthDate: inviter.birthDate || null,
+                    partnerBirthTime: inviter.birthTime || null,
+                    partnerGender: inviter.gender || null,
+                  });
+                } else if (initialCategory) {
                   if (!nickname.trim()) setNickname("사주 주인공");
                   handleStartAnalysis(initialCategory);
                 } else {
                   setStep("category");
                 }
-              }} disabled={!mbti || !birthDate || !gender || (!nickname.trim() && !initialCategory)}
+              }} disabled={!mbti || !birthDate || !gender || (!nickname.trim() && !initialCategory && !inviter)}
                 className="flex-1 py-4 rounded-2xl text-base font-bold text-white transition-all hover:scale-[1.01] active:scale-[0.99] disabled:opacity-40"
-                style={{ backgroundColor: "#3182F6" }}>
-                {initialCategory ? "분석 시작" : "다음"}
+                style={{ backgroundColor: inviter ? "#EC4899" : "#3182F6" }}>
+                {inviter ? "💕 궁합 보기" : initialCategory ? "분석 시작" : "다음"}
               </button>
             </div>
           </div>
@@ -1436,6 +1502,34 @@ function ChatPageInner() {
                       category={category}
                     />
                   )}
+                </div>
+              )}
+
+              {/* 친구랑 궁합 보기 (바이럴 초대) */}
+              {!loading && sajuData && sajuData.ilju && messages.length > 0 && (
+                <div className="animate-[fadeInUp_0.55s_ease-out]">
+                  <button
+                    onClick={handleInviteShare}
+                    className="w-full p-5 rounded-2xl text-left transition-all hover:scale-[1.01] hover:shadow-lg"
+                    style={{ background: "linear-gradient(135deg, #EC4899 0%, #D946EF 50%, #8B5CF6 100%)" }}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: "rgba(255,255,255,0.2)" }}>
+                        <Heart className="w-5 h-5 text-white" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm font-bold text-white mb-0.5">친구·연인이랑 궁합 보기</p>
+                        <p className="text-xs font-medium" style={{ color: "rgba(255,255,255,0.8)" }}>
+                          링크 보내면 상대는 정보만 입력 → 둘의 궁합이 바로 나와요
+                        </p>
+                      </div>
+                    </div>
+                    <div className="mt-3 flex justify-end">
+                      <span className="inline-flex items-center gap-1 px-4 py-2 rounded-xl text-sm font-bold" style={{ backgroundColor: "rgba(255,255,255,0.95)", color: "#D946EF" }}>
+                        {inviteCopied ? <><Check className="w-4 h-4" /> 링크 복사됨!</> : <>초대 링크 보내기 <ChevronRight className="w-4 h-4" /></>}
+                      </span>
+                    </div>
+                  </button>
                 </div>
               )}
 

@@ -41,6 +41,42 @@ export function initKakaoSDK(): void {
 }
 
 /**
+ * 궁합 초대 — 초대자 사주 정보를 URL에 담기 위한 인코딩/디코딩
+ */
+export interface InviteData {
+  mbti: string;
+  birthDate: string;
+  birthTime: string | null;
+  gender: string;
+  nickname: string;
+}
+
+export function encodeInvite(data: InviteData): string {
+  const json = JSON.stringify(data);
+  const b64 =
+    typeof window !== "undefined"
+      ? btoa(String.fromCharCode(...new TextEncoder().encode(json)))
+      : Buffer.from(json, "utf-8").toString("base64");
+  // URL-safe
+  return b64.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
+export function decodeInvite(s: string): InviteData | null {
+  try {
+    const b64 = s.replace(/-/g, "+").replace(/_/g, "/");
+    const json =
+      typeof window !== "undefined"
+        ? new TextDecoder().decode(Uint8Array.from(atob(b64), (c) => c.charCodeAt(0)))
+        : Buffer.from(b64, "base64").toString("utf-8");
+    const data = JSON.parse(json);
+    if (!data || typeof data !== "object" || !data.birthDate) return null;
+    return data as InviteData;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * 공유용 URL 생성 (세션 ID 기반)
  */
 export function getShareUrl(sessionId: string): string {
